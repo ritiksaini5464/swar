@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#070a14">
+<title>Swar Yantra · स्वर यंत्र</title>
+<style>
+  :root{
+    --bg:#070a14; --bg-elevated:#0d111f; --bg-card:#111625; --bg-card-hover:#151b2d;
+    --hairline:#1e2642; --hairline-light:#2a3458; --ink:#e8e4dc; --ink-muted:#6b7494; --ink-dim:#4a5270;
+    --ida:#7dd3fc; --ida-glow:rgba(125,211,252,0.35); --pingala:#fbbf24; --pingala-glow:rgba(251,191,36,0.35);
+    --sushumna:#f5f0e6; --sushumna-glow:rgba(245,240,230,0.15);
+    --earth:#d4a853; --water:#5eead4; --fire:#f87171; --air:#94a3b8; --ether:#c084fc;
+    --good:#4ade80; --caution:#facc15; --avoid:#fb7185;
+    --shadow:0 8px 32px rgba(0,0,0,0.4); --shadow-glow:0 0 40px rgba(125,211,252,0.08);
+    --ease-out-expo:cubic-bezier(0.16, 1, 0.3, 1); --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg); color:var(--ink); font-family:'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; min-height:100vh; overflow-x:hidden; overflow-y:auto; -webkit-overflow-scrolling:touch; position:relative; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+  #ambientCanvas{position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; opacity:0.5;}
+  ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--hairline); border-radius:2px;}
+  header{position:relative; z-index:10; text-align:center; padding:52px 20px 32px; border-bottom:1px solid var(--hairline); background:linear-gradient(180deg, rgba(125,211,252,0.03) 0%, transparent 60%);}
+  header .eyebrow{letter-spacing:0.3em; text-transform:uppercase; font-size:11px; color:var(--ink-muted); font-weight:500; margin-bottom:10px; opacity:0; transform:translateY(-8px); animation:fadeSlideDown 0.7s var(--ease-out-expo) forwards;}
+  header h1{font-size:clamp(30px,6vw,52px); font-weight:300; letter-spacing:-0.02em; line-height:1.1; opacity:0; transform:translateY(16px); animation:fadeSlideUp 0.7s 0.1s var(--ease-out-expo) forwards;}
+  header h1 .deva{background:linear-gradient(135deg, var(--pingala), #f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:500;}
+  header p.tag{color:var(--ink-muted); font-size:13.5px; max-width:500px; margin:14px auto 0; line-height:1.6; font-weight:400; opacity:0; transform:translateY(12px); animation:fadeSlideUp 0.7s 0.2s var(--ease-out-expo) forwards;}
+  @keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes fadeSlideDown{from{opacity:0;transform:translateY(-12px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:0.5;}50%{transform:scale(1.08);opacity:0.9;}}
+  @keyframes pulse-ring{0%{transform:scale(0.7);opacity:0.5;}100%{transform:scale(2.2);opacity:0;}}
+  @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+  @keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+  @keyframes countPop{0%{transform:scale(1.3);opacity:0;}60%{transform:scale(0.95);}100%{transform:scale(1);opacity:1;}}
+  @keyframes toastIn{from{opacity:0;transform:translateX(40px) scale(0.96);}to{opacity:1;transform:translateX(0) scale(1);}}
+  @keyframes toastOut{from{opacity:1;transform:translateX(0) scale(1);}to{opacity:0;transform:translateX(20px) scale(0.95);}}
+  @keyframes bellRing{0%,100%{transform:rotate(0);}15%{transform:rotate(18deg);}30%{transform:rotate(-14deg);}45%{transform:rotate(10deg);}60%{transform:rotate(-6deg);}75%{transform:rotate(3deg);}90%{transform:rotate(-1deg);}}
+  main{max-width:1080px; margin:0 auto; padding:0 20px; position:relative; z-index:1;}
+  #gate{max-width:440px; margin:64px auto; text-align:center; background:var(--bg-card); border:1px solid var(--hairline); border-radius:20px; padding:40px 28px; box-shadow:var(--shadow); opacity:0; transform:translateY(24px); animation:fadeSlideUp 0.8s 0.35s var(--ease-out-expo) forwards;}
+  #gate p{color:var(--ink-muted); font-size:13.5px; line-height:1.7; margin-bottom:24px;}
+  .btn{background:linear-gradient(135deg, var(--pingala), #d97706); color:#1a1206; border:none; padding:14px 32px; border-radius:999px; font-size:14px; font-weight:600; cursor:pointer; letter-spacing:0.01em; transition:all 0.25s var(--ease-out-expo); position:relative; overflow:hidden; box-shadow:0 4px 20px rgba(251,191,36,0.25); min-height:48px; min-width:160px; display:inline-flex; align-items:center; justify-content:center; gap:8px;}
+  .btn:hover{transform:translateY(-2px); box-shadow:0 8px 28px rgba(251,191,36,0.35);}
+  .btn:active{transform:translateY(0) scale(0.98); transition-duration:0.1s;}
+  .btn::after{content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent); transition:left 0.6s;}
+  .btn:hover::after{left:100%;}
+  .btn.ghost{background:transparent; border:1.5px solid var(--hairline-light); color:var(--ink-muted); box-shadow:none; margin-top:10px; min-height:40px; min-width:140px;}
+  .btn.ghost:hover{border-color:var(--ink-muted); color:var(--ink); transform:translateY(-1px);}
+  #locErr{color:var(--avoid); font-size:12.5px; margin-top:12px; min-height:20px;}
+  .collapsible-header{display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--ink-muted); font-size:12.5px; padding:10px 0; margin-top:16px; user-select:none; transition:color 0.2s;}
+  .collapsible-header:hover{color:var(--ink);}
+  .collapsible-header .chevron{transition:transform 0.3s var(--ease-out-expo); font-size:10px; display:inline-block;}
+  .collapsible-header.open .chevron{transform:rotate(90deg);}
+  .collapsible-body{max-height:0; overflow:hidden; transition:max-height 0.4s var(--ease-out-expo), opacity 0.3s ease; opacity:0; text-align:left;}
+  .collapsible-body.open{max-height:300px; opacity:1;}
+  .collapsible-body .inner{padding-top:12px;}
+  .collapsible-body input{background:var(--bg-elevated); border:1.5px solid var(--hairline); color:var(--ink); border-radius:10px; padding:11px 14px; font-size:13px; margin:6px 4px 0 0; width:130px; transition:border-color 0.2s, box-shadow 0.2s; outline:none; min-height:44px;}
+  .collapsible-body input:focus{border-color:var(--ida); box-shadow:0 0 0 3px rgba(125,211,252,0.1);}
+  .collapsible-body .hint{margin-top:10px; color:var(--ink-muted); font-size:11.5px; line-height:1.5;}
+  .collapsible-body .hint a{color:var(--ida); text-decoration:none;}
+  .notify-opt{margin:20px 0 4px; padding:14px 16px; background:var(--bg-elevated); border-radius:12px; border:1.5px solid var(--hairline); text-align:left; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.2s; user-select:none; min-height:56px;}
+  .notify-opt:hover{border-color:var(--hairline-light);}
+  .notify-opt input[type="checkbox"]{appearance:none; width:20px; height:20px; border:2px solid var(--hairline-light); border-radius:6px; cursor:pointer; position:relative; transition:all 0.2s; flex-shrink:0;}
+  .notify-opt input[type="checkbox"]:checked{background:var(--good); border-color:var(--good);}
+  .notify-opt input[type="checkbox"]:checked::after{content:'✓'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:var(--bg); font-size:12px; font-weight:700;}
+  .notify-opt .notify-text{flex:1;}
+  .notify-opt .notify-title{font-size:13px; font-weight:600; color:var(--ink);}
+  .notify-opt .notify-desc{font-size:11.5px; color:var(--ink-muted); margin-top:2px;}
+  .notify-opt .bell-icon{width:36px; height:36px; border-radius:10px; background:var(--bg-card); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; transition:transform 0.3s var(--ease-spring);}
+  .notify-opt .bell-icon.ringing{animation:bellRing 0.8s ease;}
+  #dash{display:none; padding-bottom:60px;}
+  .hero-section{display:flex; flex-direction:column; align-items:center; padding:40px 0 28px; position:relative;}
+  .wheel-container{position:relative; width:260px; height:260px; margin-bottom:20px; will-change:transform;}
+  #wheel{width:100%; height:100%; filter:drop-shadow(0 0 24px rgba(125,211,252,0.08)); transition:filter 0.6s ease;}
+  .wheel-glow-left{filter:drop-shadow(0 0 36px var(--ida-glow))!important;}
+  .wheel-glow-right{filter:drop-shadow(0 0 36px var(--pingala-glow))!important;}
+  .wheel-ring{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:310px; height:310px; border-radius:50%; border:1px solid var(--hairline); opacity:0.25; pointer-events:none;}
+  .wheel-ring::before{content:''; position:absolute; inset:-16px; border-radius:50%; border:1px solid var(--hairline); opacity:0.12;}
+  .pulse-ring{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:180px; height:180px; border-radius:50%; pointer-events:none;}
+  .pulse-ring.active::before{content:''; position:absolute; inset:0; border-radius:50%; border:2px solid currentColor; animation:pulse-ring 2.4s ease-out infinite;}
+  .wheel-caption{text-align:center; opacity:0; transform:translateY(12px); animation:fadeSlideUp 0.6s 0.3s var(--ease-out-expo) forwards;}
+  .wheel-caption .swarname{font-size:30px; font-weight:300; letter-spacing:-0.02em; margin:4px 0; transition:all 0.5s ease;}
+  .wheel-caption .sub{color:var(--ink-muted); font-size:13px; margin-top:4px;}
+  .wheel-caption .countdown-hero{font-size:12px; color:var(--ink-dim); margin-top:8px; font-variant-numeric:tabular-nums; letter-spacing:0.05em;}
+  .settings-bar{display:flex; align-items:center; justify-content:center; gap:12px; margin:0 auto 24px; padding:10px 20px; max-width:400px; background:var(--bg-card); border:1px solid var(--hairline); border-radius:999px; font-size:12.5px; font-weight:600; transition:all 0.3s var(--ease-out-expo);}
+  .settings-bar .setting-item{display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border-radius:999px; transition:all 0.2s; color:var(--ink-muted); user-select:none; min-height:36px;}
+  .settings-bar .setting-item:hover{background:var(--bg-elevated); color:var(--ink);}
+  .settings-bar .setting-item.on{color:var(--good);}
+  .settings-bar .setting-item.on:hover{background:rgba(74,222,128,0.08);}
+  .settings-bar .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .settings-bar .dot.on{background:var(--good); box-shadow:0 0 8px var(--good);}
+  .settings-bar .dot.off{background:var(--ink-dim);}
+  .settings-bar .divider{width:1px;height:20px;background:var(--hairline);}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:20px;}
+  
+  .card{background:var(--bg-card); border:1px solid var(--hairline); border-radius:16px; padding:22px; position:relative; overflow:hidden; transition:all 0.35s var(--ease-out-expo); opacity:0; transform:translateY(24px) scale(0.98); will-change:transform, opacity;}
+  .card.visible{opacity:1; transform:translateY(0) scale(1);}
+  .card:hover{border-color:var(--hairline-light); transform:translateY(-3px) scale(1.01); box-shadow:var(--shadow-glow), var(--shadow); background:var(--bg-card-hover);}
+  .card:active{transform:translateY(-1px) scale(0.99); transition-duration:0.1s;}
+  .card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, transparent, var(--sushumna), transparent); opacity:0; transition:opacity 0.3s;}
+  .card:hover::before{opacity:0.25;}
+  .card h3{margin:0 0 14px 0; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-muted); font-weight:600; display:flex; align-items:center; gap:8px;}
+  
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block; position:relative;}
+  .dot::after{content:''; position:absolute; inset:-4px; border-radius:50%; border:1px solid currentColor; opacity:0.35; animation:breathe 2.5s ease-in-out infinite;}
+  .row{display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--hairline); font-size:13.5px; transition:background 0.2s; margin:0 -22px; padding-left:22px; padding-right:22px;}
+  .row:hover{background:rgba(255,255,255,0.02);}
+  .row:last-child{border-bottom:none;}
+  .row .label{color:var(--ink-muted); font-size:12.5px;}
+  .row .val{color:var(--ink); font-weight:600; text-align:right; font-variant-numeric:tabular-nums;}
+  .big{font-size:26px; font-weight:300; margin-bottom:6px; letter-spacing:-0.02em;}
+  .tattva-chip{display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; font-size:13px; font-weight:600; border:1.5px solid var(--hairline); margin-bottom:12px; transition:all 0.3s var(--ease-out-expo); background:rgba(255,255,255,0.03);}
+  .tattva-chip:hover{transform:scale(1.03);}
+  .verdict{display:inline-flex; align-items:center; gap:6px; padding:5px 14px; border-radius:8px; font-size:12px; font-weight:700; letter-spacing:0.02em; transition:all 0.25s var(--ease-spring); cursor:default;}
+  .verdict:hover{transform:scale(1.06);}
+  .v-excellent{background:rgba(74,222,128,0.1); color:var(--good); border:1.5px solid rgba(74,222,128,0.2);}
+  .v-good{background:rgba(250,204,21,0.1); color:var(--caution); border:1.5px solid rgba(250,204,21,0.2);}
+  .v-avoid{background:rgba(251,113,133,0.1); color:var(--avoid); border:1.5px solid rgba(251,113,133,0.2);}
+  .tips{font-size:13px; color:var(--ink-muted); line-height:1.7; margin-top:10px;}
+  .tips b{color:var(--ink); font-weight:600;}
+  .full{grid-column:1/-1;}
+  .tl-block{flex:1 1 130px; border-radius:12px; padding:12px 14px; border:1.5px solid var(--hairline); font-size:12px; cursor:pointer; transition:all 0.3s var(--ease-out-expo); position:relative; overflow:hidden; min-height:56px;}
+  .tl-block:hover{transform:translateY(-3px) scale(1.02); border-color:var(--hairline-light); z-index:2;}
+  .tl-block:active{transform:translateY(-1px) scale(0.98);}
+  .tl-block .tl-swar{font-weight:700; letter-spacing:0.04em; font-size:11px; text-transform:uppercase;}
+  .tl-block .tl-time{color:var(--ink-muted); margin-top:4px; font-size:11px;}
+  .tl-left{background:linear-gradient(135deg, rgba(125,211,252,0.08), rgba(125,211,252,0.02));}
+  .tl-left .tl-swar{color:var(--ida);}
+  .tl-right{background:linear-gradient(135deg, rgba(251,191,36,0.08), rgba(251,191,36,0.02));}
+  .tl-right .tl-swar{color:var(--pingala);}
+  .tl-now{border-color:var(--sushumna)!important; box-shadow:0 0 20px var(--sushumna-glow), inset 0 0 20px rgba(245,240,230,0.03); animation:float 3s ease-in-out infinite;}
+  .tl-now::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--sushumna); opacity:0.7;}
+  .tv-block{flex:1 1 90px; border-radius:10px; padding:10px 12px; border:1.5px solid var(--hairline); font-size:11.5px; cursor:pointer; transition:all 0.3s var(--ease-out-expo); position:relative; overflow:hidden; min-height:50px;}
+  .tv-block:hover{transform:translateY(-2px) scale(1.03); z-index:2;}
+  .tv-block .tv-name{font-weight:700; letter-spacing:0.02em; font-size:11px;}
+  .tv-block .tv-time{color:var(--ink-muted); margin-top:3px; font-size:10.5px;}
+  .tv-progress{position:absolute; bottom:0; left:0; height:2px; background:currentColor; opacity:0.6; transition:width 1s linear;}
+  .progress-bar{height:3px; background:var(--hairline); border-radius:3px; margin-top:10px; overflow:hidden;}
+  .progress-bar .fill{height:100%; border-radius:3px; transition:width 1s linear; position:relative; overflow:hidden;}
+  .progress-bar .fill::after{content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent); animation:shimmer 2s infinite;}
+  .clock{text-align:center; color:var(--ink-dim); font-size:12px; margin-top:32px; letter-spacing:0.04em; font-variant-numeric:tabular-nums; padding:16px; border-top:1px solid var(--hairline); opacity:0.7;}
+  footer{max-width:720px; margin:32px auto 0; padding:0 20px 32px; color:var(--ink-dim); font-size:11px; line-height:1.7; text-align:center;}
+  .toast-container{position:fixed; top:16px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:360px; width:calc(100% - 32px);}
+  .toast{background:var(--bg-card); border:1.5px solid var(--hairline-light); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow), 0 0 40px rgba(74,222,128,0.08); pointer-events:auto; animation:toastIn 0.45s var(--ease-out-expo) forwards; position:relative; overflow:hidden; backdrop-filter:blur(12px);}
+  .toast.hiding{animation:toastOut 0.35s ease forwards;}
+  .toast::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--good);}
+  .toast-title{font-size:13px; font-weight:700; color:var(--good); display:flex; align-items:center; gap:8px; margin-bottom:4px; padding-right:24px;}
+  .toast-body{font-size:12.5px; color:var(--ink-muted); line-height:1.55;}
+  .toast-body b{color:var(--ink);}
+  .toast-close{position:absolute; top:10px; right:12px; background:none; border:none; color:var(--ink-dim); font-size:18px; cursor:pointer; padding:2px 6px; border-radius:4px; transition:all 0.2s; line-height:1;}
+  .toast-close:hover{color:var(--ink); background:var(--bg-elevated);}
+  .toast-time{font-size:11px; color:var(--ink-dim); margin-top:8px; font-variant-numeric:tabular-nums;}
+  
+  /* --- PLANNER STYLES --- */
+  .planner-date {
+    background: var(--bg-elevated); border: 1.5px solid var(--hairline); color: var(--ink);
+    border-radius: 8px; padding: 6px 10px; font-size: 13px; outline: none; cursor: pointer; color-scheme: dark;
+    transition: all 0.2s;
+  }
+  .planner-date:hover { border-color: var(--ida); }
+  .window-chip {
+    padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--hairline);
+    font-size: 11.5px; background: rgba(255,255,255,0.02); display: flex; flex-direction: column; gap: 4px;
+    flex: 1 1 120px; min-width: 130px;
+  }
+  .window-chip .w-time { font-weight: 600; color: var(--ink); }
+  .window-chip .w-tattva { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  .chip-left { border-left-color: var(--ida); border-left-width: 3px; }
+  .chip-right { border-left-color: var(--pingala); border-left-width: 3px; }
+  .t-prithvi { color: var(--earth); }
+  .t-jal { color: var(--water); }
+  .t-agni { color: var(--fire); }
+  .t-akash { color: var(--ether); }
+
+  @media(max-width:640px){.wheel-container{width:220px; height:220px;} .wheel-ring{width:260px; height:260px;} .grid{grid-template-columns:1fr; gap:12px;} .card{padding:18px;} .row{margin:0 -18px; padding-left:18px; padding-right:18px;} .settings-bar{max-width:none; border-radius:12px; padding:8px 14px;} .toast-container{right:12px; left:12px; max-width:none;}}
+  .skeleton{background:linear-gradient(90deg, var(--hairline) 25%, var(--hairline-light) 50%, var(--hairline) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:16px; width:60%; display:inline-block;}
+  .manifest-block{padding:16px; background:var(--bg-elevated); border-radius:12px; border:1.5px solid var(--hairline); transition:all 0.3s var(--ease-out-expo);}
+  .manifest-block:hover{border-color:var(--hairline-light); transform:translateY(-2px);}
+  .manifest-header{font-size:13px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .manifest-header .indicator{width:6px; height:6px; border-radius:50%; display:inline-block;}
+</style>
+<base target="_blank">
+</head>
+<body>
+<canvas id="ambientCanvas"></canvas>
+<div class="toast-container" id="toastContainer"></div>
+<header>
+  <div class="eyebrow">Shiv Swarodaya · Breath Astrology</div>
+  <h1>Swar <span class="deva">Yantra</span></h1>
+  <p class="tag">A live reading of the Universal Swar, ruling tattva, tithi, nakshatra and lagna — computed from your location and the current moment.</p>
+</header>
+<main>
+  <div id="gate">
+    <p>This runs entirely on your device — no data leaves your browser. It needs your location to calculate sunrise, and works fully offline once loaded.</p>
+    <button class="btn" onclick="detectLocation()">📍 Detect my location</button>
+    <div id="locErr"></div>
+    <label class="notify-opt" for="notifyGate" onclick="event.preventDefault(); toggleNotifyGate()">
+      <div class="bell-icon" id="bellGate">🔔</div>
+      <div class="notify-text">
+        <div class="notify-title">Alert me for auspicious windows</div>
+        <div class="notify-desc">Notify when Left Swar + Earth (Prithvi) align — best time for attraction.</div>
+      </div>
+      <input type="checkbox" id="notifyGate" onchange="onNotifyGateChange(event)" onclick="event.stopPropagation()">
+    </label>
+    <div class="collapsible-header" id="manualToggle" onclick="toggleManual()">
+      <span class="chevron">›</span> Or enter location manually
+    </div>
+    <div class="collapsible-body" id="manualBody">
+      <div class="inner" style="text-align:center;">
+        <input id="manLat" type="number" step="0.0001" placeholder="Latitude" min="-90" max="90" inputmode="decimal">
+        <input id="manLon" type="number" step="0.0001" placeholder="Longitude" min="-180" max="180" inputmode="decimal">
+        <br>
+        <button class="btn ghost" onclick="useManualLocation()">Use this location</button>
+        <div class="hint">Don't know your coordinates? Search your city on <a href="https://www.google.com/maps" target="_blank">Google Maps</a>, right-click your spot, and the lat/long appears at the top.</div>
+      </div>
+    </div>
+  </div>
+  <div id="dash">
+    <div class="hero-section">
+      <div class="wheel-container">
+        <div class="wheel-ring"></div>
+        <div class="pulse-ring" id="pulseRing"></div>
+        <svg id="wheel" width="260" height="260" viewBox="0 0 260 260">
+          <defs>
+            <linearGradient id="gradIda" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#7dd3fc;stop-opacity:1"/><stop offset="100%" style="stop-color:#38bdf8;stop-opacity:1"/></linearGradient>
+            <linearGradient id="gradPingala" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1"/><stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1"/></linearGradient>
+            <filter id="glowIda"><feGaussianBlur stdDeviation="5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowPingala"><feGaussianBlur stdDeviation="5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <clipPath id="leftHalf"><rect x="0" y="0" width="130" height="260"/></clipPath>
+            <clipPath id="rightHalf"><rect x="130" y="0" width="130" height="260"/></clipPath>
+          </defs>
+          <circle cx="130" cy="130" r="112" fill="none" stroke="var(--hairline)" stroke-width="1" opacity="0.4"/>
+          <circle cx="130" cy="130" r="100" fill="none" stroke="var(--hairline)" stroke-width="1" opacity="0.25" stroke-dasharray="4 4"/>
+          <g clip-path="url(#leftHalf)">
+            <circle id="idaArc" cx="130" cy="130" r="92" fill="none" stroke="url(#gradIda)" stroke-width="12" stroke-linecap="round" filter="url(#glowIda)" opacity="0.12"/>
+          </g>
+          <g clip-path="url(#rightHalf)">
+            <circle id="pingalaArc" cx="130" cy="130" r="92" fill="none" stroke="url(#gradPingala)" stroke-width="12" stroke-linecap="round" filter="url(#glowPingala)" opacity="0.12"/>
+          </g>
+          <line x1="130" y1="28" x2="130" y2="232" stroke="var(--sushumna)" stroke-width="2" opacity="0.12" stroke-dasharray="8 6"/>
+          <circle id="centerDot" cx="130" cy="130" r="8" fill="var(--sushumna)" opacity="0.35"/>
+          <circle id="centerDotInner" cx="130" cy="130" r="4" fill="var(--bg)" opacity="0.8"/>
+          
+          <text x="80" y="134" fill="var(--ida)" font-size="12" font-family="sans-serif" letter-spacing="2" font-weight="600" opacity="0.75" text-anchor="middle">LEFT</text>
+          <text x="180" y="134" fill="var(--pingala)" font-size="12" font-family="sans-serif" letter-spacing="2" font-weight="600" opacity="0.75" text-anchor="middle">RIGHT</text>
+          
+          <g id="orbitGroup" transform="translate(130,130)">
+            <circle id="orbitDotLeft" cx="0" cy="-92" r="3" fill="var(--ida)" opacity="0"/>
+            <circle id="orbitDotRight" cx="0" cy="-92" r="3" fill="var(--pingala)" opacity="0"/>
+          </g>
+        </svg>
+      </div>
+      <div class="wheel-caption">
+        <div class="sub">Universal Swar right now</div>
+        <div class="swarname" id="swarName">—</div>
+        <div class="sub" id="swarSub">—</div>
+        <div class="countdown-hero" id="heroCountdown">Next change in —</div>
+      </div>
+    </div>
+    <div class="settings-bar" id="settingsBar">
+      <div class="setting-item" id="notifySetting" onclick="toggleNotifyStatus()">
+        <span class="dot off" id="notifyDot"></span>
+        <span>Auspicious alerts</span>
+      </div>
+      <div class="divider"></div>
+      <div class="setting-item" onclick="resetLocation()">
+        <span>🔄</span>
+        <span>Change location</span>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card" data-delay="0">
+        <h3><span class="dot" id="tattvaDot"></span>Element in flow — Tattva</h3>
+        <div class="tattva-chip" id="tattvaChip">—</div>
+        <div class="row"><span class="label">Meaning</span><span class="val" id="tattvaMeaning">—</span></div>
+        <div class="row"><span class="label">Changes in</span><span class="val" id="tattvaCountdown">—</span></div>
+        <div class="progress-bar"><div class="fill" id="tattvaProgress" style="width:0%"></div></div>
+      </div>
+      <div class="card" data-delay="1">
+        <h3>Universal Swar transition</h3>
+        <div class="row"><span class="label">Since</span><span class="val" id="swarSince">—</span></div>
+        <div class="row"><span class="label">Next change (2 hr)</span><span class="val" id="swarNext">—</span></div>
+        <div class="row"><span class="label">Today's sunrise</span><span class="val" id="sunriseVal">—</span></div>
+        <div class="progress-bar"><div class="fill" id="swarProgress" style="width:0%"></div></div>
+      </div>
+      <div class="card" data-delay="2">
+        <h3>Panchang</h3>
+        <div class="row"><span class="label">Weekday</span><span class="val" id="weekdayVal">—</span></div>
+        <div class="row"><span class="label">Paksha / Tithi</span><span class="val" id="tithiVal">—</span></div>
+        <div class="row"><span class="label">Moon Nakshatra</span><span class="val" id="nakshatraVal">—</span></div>
+      </div>
+      <div class="card" data-delay="3">
+        <h3>Lagna right now</h3>
+        <div class="big" id="lagnaVal">—</div>
+        <div class="row"><span class="label">Likely question theme</span><span class="val" id="lagnaTheme">—</span></div>
+      </div>
+      <div class="card full" data-delay="4">
+        <h3>Today's Universal Swar timeline — Left / Right, every 2 hours from sunrise</h3>
+        <div id="timeline" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
+      <div class="card full" data-delay="5">
+        <h3>Today's Tattva timeline — 5 elements, 24 min each, resetting every swar block</h3>
+        <div id="tattvaTimeline" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+      
+      <div class="card full" data-delay="6">
+        <h3>Manifestation timing</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-top:0;">
+          <div class="manifest-block">
+            <div class="manifest-header"><span class="indicator" style="background:var(--good);"></span>To attract / gain something</div>
+            <span class="verdict" id="gainVerdict">—</span>
+            <div class="tips">Inhale through the <b>nose</b>, exhale through the <b>mouth</b>. Active Swar requirement: <b>Left Swar</b> + <b>Earth/Water</b>.</div>
+          </div>
+          <div class="manifest-block">
+            <div class="manifest-header"><span class="indicator" style="background:var(--avoid);"></span>To release / end / heal</div>
+            <span class="verdict" id="releaseVerdict">—</span>
+            <div class="tips">Inhale through the <b>mouth</b>, exhale through the <b>nose</b>. Active Swar requirement: <b>Right Swar</b> + <b>Fire/Ether</b>.</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Favourable Windows Planner Card -->
+      <div class="card full" data-delay="7">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <h3 style="margin:0;">Daily Favourable Windows</h3>
+          <input type="date" id="plannerDate" onchange="updatePlanner()" class="planner-date">
+        </div>
+        
+        <div style="margin-bottom:24px;">
+          <div class="row" style="border-bottom:none; padding-bottom:10px;"><span class="label" style="color:var(--good); font-weight:600;">For Attraction & Gain (Left Swar + Earth/Water)</span></div>
+          <div id="plannerGain" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+        </div>
+
+        <div>
+          <div class="row" style="border-bottom:none; padding-bottom:10px;"><span class="label" style="color:var(--avoid); font-weight:600;">For Healing & Release (Right Swar + Fire/Ether)</span></div>
+          <div id="plannerRelease" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+        </div>
+      </div>
+
+      <div class="card full" data-delay="8">
+        <h3>Sarvasiddhi conditions & travel</h3>
+        <div class="tips" id="sarvaText">—</div>
+      </div>
+    </div>
+    <div class="clock" id="clock">—</div>
+  </div>
+</main>
+<footer>
+  Calculations use standard low-precision solar/lunar longitude formulas and the sunrise equation — accurate to within a few minutes/degrees, sufficient for swar and tattva timing, not for scientific ephemeris use. Ayanamsa: Lahiri (approx). Interpretations are drawn from the Shiv Swarodaya text and traditional swar-yoga notes; they describe a spiritual practice, not a factual claim. Location and time never leave this page.
+</footer>
+<script>
+const RAD = Math.PI/180;
+function norm360(x){ x = x % 360; return x<0 ? x+360 : x; }
+function toJD(date){ return date.getTime()/86400000 + 2440587.5; }
+function fromJD(jd){ return new Date((jd-2440587.5)*86400000); }
+
+function sunTimesFor(dateLocalNoon, lat, lon){
+  const JD = toJD(dateLocalNoon);
+  const n = Math.floor(JD - 2451545.0 + 0.0008);
+  const Jstar = n - lon/360;
+  const M = norm360(357.5291 + 0.98560028*Jstar);
+  const Mr = M*RAD;
+  const C = 1.9148*Math.sin(Mr) + 0.0200*Math.sin(2*Mr) + 0.0003*Math.sin(3*Mr);
+  const lambda = norm360(M + C + 180 + 102.9372);
+  const lr = lambda*RAD;
+  const Jtransit = 2451545.0 + Jstar + 0.0053*Math.sin(Mr) - 0.0069*Math.sin(2*lr);
+  const delta = Math.asin(Math.sin(lr)*Math.sin(23.44*RAD));
+  const cosOmega = (Math.sin(-0.83*RAD) - Math.sin(lat*RAD)*Math.sin(delta)) / (Math.cos(lat*RAD)*Math.cos(delta));
+  const clamped = Math.min(1, Math.max(-1, cosOmega));
+  const omega = Math.acos(clamped)/RAD;
+  const Jset = 2451545.0 + Jstar + 0.0053*Math.sin(Mr) - 0.0069*Math.sin(2*lr) + omega/360;
+  const Jrise = Jtransit - (Jset - Jtransit);
+  return { sunrise: fromJD(Jrise), sunset: fromJD(Jset) };
+}
+
+function sunLongitude(JD){
+  const T = (JD-2451545.0)/36525;
+  const L0 = norm360(280.46646 + 36000.76983*T + 0.0003032*T*T);
+  const M = norm360(357.52911 + 35999.05029*T - 0.0001537*T*T);
+  const Mr = M*RAD;
+  const C = (1.914602-0.004817*T-0.000014*T*T)*Math.sin(Mr) + (0.019993-0.000101*T)*Math.sin(2*Mr) + 0.000289*Math.sin(3*Mr);
+  return norm360(L0+C);
+}
+function moonLongitude(JD){
+  const T = (JD-2451545.0)/36525;
+  const Lp = norm360(218.3164477 + 481267.88123421*T - 0.0015786*T*T);
+  const D = norm360(297.8501921 + 445267.1114034*T - 0.0018819*T*T);
+  const M = norm360(357.5291092 + 35999.0502909*T - 0.0001536*T*T);
+  const Mp = norm360(134.9633964 + 477198.8675055*T + 0.0087414*T*T);
+  const F = norm360(93.2720950 + 483202.0175233*T - 0.0036539*T*T);
+  const r = RAD;
+  const dL =
+    6.288774*Math.sin(Mp*r) + 1.274027*Math.sin((2*D-Mp)*r) + 0.658314*Math.sin(2*D*r) +
+    0.213618*Math.sin(2*Mp*r) - 0.185116*Math.sin(M*r) - 0.114332*Math.sin(2*F*r) +
+    0.058793*Math.sin((2*D-2*Mp)*r) + 0.057066*Math.sin((2*D-M-Mp)*r) + 0.053322*Math.sin((2*D+Mp)*r) +
+    0.045758*Math.sin((2*D-M)*r) - 0.040923*Math.sin((M-Mp)*r) - 0.034720*Math.sin(D*r) - 0.030383*Math.sin((M+Mp)*r);
+  return norm360(Lp+dL);
+}
+function lahiriAyanamsa(JD){
+  const T=(JD-2451545.0)/36525; const yrs=T*100;
+  return 23.85 + yrs*0.013972;
+}
+function tithiInfo(JD){
+  const diff = norm360(moonLongitude(JD) - sunLongitude(JD));
+  const num = Math.floor(diff/12)+1;
+  const paksha = num<=15 ? 'Shukla' : 'Krishna';
+  const inPaksha = num<=15 ? num : num-15;
+  return { continuous:num, paksha, inPaksha };
+}
+const TITHI_NAMES = ['Pratipada','Dwitiya','Tritiya','Chaturthi','Panchami','Shashthi','Saptami','Ashtami','Navami','Dashami','Ekadashi','Dwadashi','Trayodashi','Chaturdashi','Purnima/Amavasya'];
+const NAKSHATRA = ['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
+const RASHI = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+const RASHI_THEME = {
+  'Aries':'Money, finance','Taurus':'Business, profession','Gemini':'Marriage, kids, family',
+  'Cancer':'Profit and loss','Leo':'Solving/creating a problem, or a missing person',
+  'Virgo':'Wife, marriage, or a woman; extramarital matters','Libra':'A lost/missing item, promotion',
+  'Scorpio':'Job prospects, in-laws','Sagittarius':'Children, timing to start a business/build/buy a house, marriage',
+  'Capricorn':'Court case, litigation, conflict','Aquarius':'Property, wealth, travel, ambition — asked indirectly',
+  'Pisces':'Salvation, spirituality, siddhis'
+};
+
+function ascendant(JD, lat, lon){
+  const T=(JD-2451545.0)/36525;
+  let GMST = 280.46061837 + 360.98564736629*(JD-2451545.0) + 0.000387933*T*T - (T*T*T)/38710000;
+  GMST = norm360(GMST);
+  const RAMC = norm360(GMST + lon);
+  const eps = 23.439291 - 0.0130042*T;
+  const RAMCr = RAMC*RAD, epsr = eps*RAD, latr = lat*RAD;
+  let ascRad = Math.atan2(Math.cos(RAMCr), -(Math.sin(epsr)*Math.tan(latr) + Math.cos(epsr)*Math.sin(RAMCr)));
+  return norm360(ascRad/RAD);
+}
+
+// ===================== SWAR RULES (Shiv Swarodaya v.62-63) =====================
+const SHUKLA_LEFT_TITHIS = [1,2,3,7,8,9,13,14,15];
+const SHUKLA_RIGHT_TITHIS = [4,5,6,10,11,12];
+const KRISHNA_LEFT_TITHIS = [4,5,6,10,11,12];
+const KRISHNA_RIGHT_TITHIS = [1,2,3,7,8,9,13,14,15];
+
+function startingSwarFromTithi(paksha, inPaksha){
+  if(paksha==='Shukla'){
+    return SHUKLA_LEFT_TITHIS.includes(inPaksha) ? 'left' : 'right';
+  } else {
+    return KRISHNA_LEFT_TITHIS.includes(inPaksha) ? 'left' : 'right';
+  }
+}
+
+const SWAR_INTERVAL_MIN = 120;
+function computeSwarState(now, sunriseToday, sunriseYesterday, tithiTodaySunrise, tithiYestSunrise){
+  let ref, tithiRef;
+  if(now >= sunriseToday){ ref = sunriseToday; tithiRef = tithiTodaySunrise; }
+  else { ref = sunriseYesterday; tithiRef = tithiYestSunrise; }
+  const startSwar = startingSwarFromTithi(tithiRef.paksha, tithiRef.inPaksha);
+  const minutesSince = (now-ref)/60000;
+  const segment = Math.floor(minutesSince/SWAR_INTERVAL_MIN);
+  const swar = segment%2===0 ? startSwar : (startSwar==='left'?'right':'left');
+  const segStart = new Date(ref.getTime() + segment*SWAR_INTERVAL_MIN*60000);
+  const nextSwarChange = new Date(segStart.getTime() + SWAR_INTERVAL_MIN*60000);
+  const order = ['vayu','agni','prithvi','jal','akash'];
+  const minuteInSeg = minutesSince - segment*SWAR_INTERVAL_MIN;
+  const TATTVA_SLOT_MIN = SWAR_INTERVAL_MIN/5;
+  const idx = Math.min(4, Math.floor(minuteInSeg/TATTVA_SLOT_MIN));
+  const tattva = order[idx];
+  const tattvaStart = new Date(segStart.getTime() + idx*TATTVA_SLOT_MIN*60000);
+  const nextTattvaChange = new Date(tattvaStart.getTime() + TATTVA_SLOT_MIN*60000);
+  return { swar, tattva, segStart, nextSwarChange, nextTattvaChange, ref, startSwar, minuteInSeg, TATTVA_SLOT_MIN };
+}
+function buildTimeline(ref, startSwar){
+  const blocks = [];
+  let swar = startSwar;
+  for(let i=0;i<12;i++){
+    const start = new Date(ref.getTime() + i*SWAR_INTERVAL_MIN*60000);
+    const end = new Date(start.getTime() + SWAR_INTERVAL_MIN*60000);
+    blocks.push({start, end, swar});
+    swar = swar==='left' ? 'right' : 'left';
+  }
+  return blocks;
+}
+function buildTattvaTimeline(ref){
+  const order = ['vayu','agni','prithvi','jal','akash'];
+  const TATTVA_SLOT_MIN = SWAR_INTERVAL_MIN/5;
+  const slots = [];
+  const totalSlots = (24*60)/TATTVA_SLOT_MIN;
+  for(let i=0;i<totalSlots;i++){
+    const start = new Date(ref.getTime() + i*TATTVA_SLOT_MIN*60000);
+    const end = new Date(start.getTime() + TATTVA_SLOT_MIN*60000);
+    slots.push({start, end, tattva: order[i%5]});
+  }
+  return slots;
+}
+
+const TATTVA_INFO = {
+  vayu:{label:'Vayu · Air', color:'var(--air)', meaning:'Scattering, movement — things drift or get lost. Avoid new commitments.'},
+  agni:{label:'Agni · Fire', color:'var(--fire)', meaning:'Consuming, destructive — good only for harsh, forceful, or combative acts.'},
+  prithvi:{label:'Prithvi · Earth', color:'var(--earth)', meaning:'Stable, grounding — best for anything meant to last: signing, building, committing.'},
+  jal:{label:'Jal · Water', color:'var(--water)', meaning:'Smooth and flowing — the most favourable element; work completes with ease.'},
+  akash:{label:'Akash · Ether', color:'var(--ether)', meaning:'Empty of worldly fruit — good only for meditation, fruitless for material aims.'}
+};
+
+let LAT=null, LON=null, timer=null, prevSwar=null, prevTattva=null;
+
+const STORAGE_KEYS = {
+  LAT: 'swar_lat',
+  LON: 'swar_lon',
+  NOTIFY: 'swar_notify',
+  LAST_NOTIFY_KEY: 'swar_last_notify_key'
+};
+
+function saveLocation(lat, lon){
+  try{ localStorage.setItem(STORAGE_KEYS.LAT, String(lat)); localStorage.setItem(STORAGE_KEYS.LON, String(lon)); }
+  catch(e){}
+}
+function loadLocation(){
+  try{
+    const lat = parseFloat(localStorage.getItem(STORAGE_KEYS.LAT));
+    const lon = parseFloat(localStorage.getItem(STORAGE_KEYS.LON));
+    if(!isNaN(lat) && !isNaN(lon) && lat>=-90 && lat<=90 && lon>=-180 && lon<=180) return {lat, lon};
+  }catch(e){}
+  return null;
+}
+function clearLocation(){
+  try{
+    localStorage.removeItem(STORAGE_KEYS.LAT);
+    localStorage.removeItem(STORAGE_KEYS.LON);
+    localStorage.removeItem(STORAGE_KEYS.LAST_NOTIFY_KEY);
+  }catch(e){}
+}
+function saveNotifyPref(enabled){
+  try{ localStorage.setItem(STORAGE_KEYS.NOTIFY, enabled ? '1' : '0'); }catch(e){}
+}
+function loadNotifyPref(){
+  try{ return localStorage.getItem(STORAGE_KEYS.NOTIFY) === '1'; }catch(e){ return false; }
+}
+function getLastNotifyKey(){
+  try{ return localStorage.getItem(STORAGE_KEYS.LAST_NOTIFY_KEY) || null; }catch(e){ return null; }
+}
+function setLastNotifyKey(key){
+  try{ localStorage.setItem(STORAGE_KEYS.LAST_NOTIFY_KEY, key); }catch(e){}
+}
+
+// ===================== NOTIFICATIONS =====================
+let notifyEnabled = false;
+
+function toggleNotifyGate(){
+  const cb = document.getElementById('notifyGate');
+  cb.checked = !cb.checked;
+  onNotifyGateChange({target:cb});
+}
+
+async function onNotifyGateChange(e){
+  notifyEnabled = e.target.checked;
+  const bell = document.getElementById('bellGate');
+  if(notifyEnabled){
+    bell.classList.add('ringing');
+    setTimeout(()=>bell.classList.remove('ringing'), 800);
+    if('Notification' in window){
+      try{
+        if(Notification.permission === 'default'){
+          await Notification.requestPermission();
+        }
+        if(Notification.permission !== 'granted'){
+          notifyEnabled = false; e.target.checked = false;
+          document.getElementById('locErr').textContent = 'Notification permission denied. You can still see in-app alerts while the app is open.';
+          saveNotifyPref(false);
+          return;
+        }
+      }catch(err){
+        document.getElementById('locErr').textContent = 'System notifications aren\'t supported in this app build — you\'ll still get in-app alerts while it\'s open.';
+      }
+    } else {
+      document.getElementById('locErr').textContent = 'System notifications aren\'t supported in this app build — you\'ll still get in-app alerts while it\'s open.';
+    }
+  }
+  saveNotifyPref(notifyEnabled);
+  if(notifyEnabled) scheduleNativeNotifications(true);
+  else cancelNativeNotifications();
+}
+
+function toggleNotifyStatus(){
+  notifyEnabled = !notifyEnabled;
+  saveNotifyPref(notifyEnabled);
+  updateNotifyStatusUI();
+  if(notifyEnabled){
+    if('Notification' in window && Notification.permission === 'default'){
+      try{ Notification.requestPermission(); }catch(e){}
+    }
+    scheduleNativeNotifications(true);
+  } else {
+    cancelNativeNotifications();
+  }
+}
+
+function updateNotifyStatusUI(){
+  const item = document.getElementById('notifySetting');
+  const dot = document.getElementById('notifyDot');
+  if(notifyEnabled){
+    item.classList.add('on');
+    dot.classList.remove('off'); dot.classList.add('on');
+  } else {
+    item.classList.remove('on');
+    dot.classList.remove('on'); dot.classList.add('off');
+  }
+}
+
+function showToast(title, body, duration=7000){
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = '<button class="toast-close" onclick="dismissToast(this)">×</button><div class="toast-title">✦ '+title+'</div><div class="toast-body">'+body+'</div><div class="toast-time">'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</div>';
+  container.appendChild(toast);
+  setTimeout(()=>{ if(toast.parentElement) dismissToast(toast.querySelector('.toast-close')); }, duration);
+}
+function dismissToast(btn){
+  const toast = btn.closest('.toast');
+  if(!toast) return;
+  toast.classList.add('hiding');
+  setTimeout(()=>{ if(toast.parentElement) toast.remove(); }, 350);
+}
+
+function sendNativeNotification(title, body){
+  if('vibrate' in navigator){
+    try{ navigator.vibrate([120,60,120]); }catch(e){}
+  }
+  if(window.Android && typeof window.Android.showNotification === 'function'){
+    try{ window.Android.showNotification(title, body); return; }catch(e){}
+  }
+  if('Notification' in window && Notification.permission === 'granted'){
+    try{
+      new Notification(title, { body: body, tag: 'swar-yantra-auspicious', requireInteraction: false, silent: false });
+    }catch(e){}
+  }
+}
+
+function checkAuspiciousWindow(state){
+  if(!notifyEnabled) return;
+  const isLeftSwar = state.swar === 'left';
+  const isEarth = state.tattva === 'prithvi';
+  if(isLeftSwar && isEarth){
+    const segIndex = Math.floor(state.segStart.getTime() / 7200000);
+    const windowKey = state.segStart.toISOString().split('T')[0] + '_' + segIndex;
+    const storedKey = getLastNotifyKey();
+    if(storedKey !== windowKey){
+      setLastNotifyKey(windowKey);
+      const title = 'Auspicious Window — Left Swar + Earth';
+      const body = 'This is an excellent time for <b>attraction, gain, and manifestation</b>. Inhale through the nose, exhale through the mouth. The Earth element grounds your intention into reality.';
+      showToast(title, body, 10000);
+      sendNativeNotification(title, 'Left Swar + Prithvi (Earth) — excellent time for attraction and gain.');
+    }
+  }
+}
+
+// ===================== TRUE BACKGROUND SCHEDULING (Capacitor) =====================
+const NOTIF_SCHEDULE_DAYS = 21; 
+const SCHEDULED_IDS_KEY   = 'swar_scheduled_ids';
+const LAST_SCHEDULE_KEY   = 'swar_last_schedule_ts';
+const RESCHEDULE_EVERY_MS = 12 * 60 * 60 * 1000; 
+
+function getNativeNotificationPlugin(){
+  if(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications){
+    return { type:'capacitor', api: window.Capacitor.Plugins.LocalNotifications };
+  }
+  if(window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local){
+    return { type:'cordova', api: window.cordova.plugins.notification.local };
+  }
+  return null;
+}
+
+function getScheduledIds(){
+  try{ return JSON.parse(localStorage.getItem(SCHEDULED_IDS_KEY) || '[]'); }catch(e){ return []; }
+}
+function setScheduledIds(ids){
+  try{ localStorage.setItem(SCHEDULED_IDS_KEY, JSON.stringify(ids)); }catch(e){}
+}
+function notifIdFor(date){
+  return Math.floor(date.getTime()/60000) % 2000000000;
+}
+
+function computeUpcomingAuspiciousWindows(daysAhead){
+  const windows = [];
+  const now = new Date();
+  for(let d=-1; d<=daysAhead; d++){
+    const dayAnchor = new Date(localNoon(now).getTime() + d*86400000);
+    const st = sunTimesFor(dayAnchor, LAT, LON);
+    const ti = tithiInfo(toJD(st.sunrise));
+    const startSwar = startingSwarFromTithi(ti.paksha, ti.inPaksha);
+    const tvSlots = buildTattvaTimeline(st.sunrise);
+    tvSlots.forEach((slot, i)=>{
+      const blockIdx = Math.floor(i / 5);
+      const swar = blockIdx % 2 === 0 ? startSwar : (startSwar==='left' ? 'right' : 'left');
+      if(swar==='left' && slot.tattva==='prithvi' && slot.start > now){
+        windows.push({ start: slot.start, end: slot.end });
+      }
+    });
+  }
+  windows.sort((a,b)=>a.start-b.start);
+  return windows;
+}
+
+async function cancelNativeNotifications(){
+  const plugin = getNativeNotificationPlugin();
+  const ids = getScheduledIds();
+  if(!plugin || !ids.length){ setScheduledIds([]); return; }
+  try{
+    if(plugin.type==='capacitor'){
+      await plugin.api.cancel({ notifications: ids.map(id=>({id})) });
+    } else if(plugin.type==='cordova'){
+      plugin.api.cancel(ids);
+    }
+  }catch(e){}
+  setScheduledIds([]);
+}
+
+async function scheduleNativeNotifications(force){
+  if(!notifyEnabled || LAT===null || LON===null) return;
+  const plugin = getNativeNotificationPlugin();
+  if(!plugin) return; 
+
+  if(!force){
+    const lastTs = parseInt(localStorage.getItem(LAST_SCHEDULE_KEY) || '0', 10);
+    if(Date.now() - lastTs < RESCHEDULE_EVERY_MS) return; 
+  }
+
+  await cancelNativeNotifications();
+
+  const windows = computeUpcomingAuspiciousWindows(NOTIF_SCHEDULE_DAYS);
+  const title = 'Auspicious Window — Left Swar + Earth';
+  const body  = 'Excellent time for attraction, gain and manifestation. Inhale through the nose, exhale through the mouth.';
+  const ids = [];
+
+  try{
+    if(plugin.type==='capacitor'){
+      const perm = await plugin.api.requestPermissions();
+      if(perm.display !== 'granted') return;
+      const notifications = windows.map(w=>{
+        const id = notifIdFor(w.start);
+        ids.push(id);
+        return { id, title, body, schedule:{ at: w.start, allowWhileIdle:true } };
+      });
+      if(notifications.length) await plugin.api.schedule({ notifications });
+    } else if(plugin.type==='cordova'){
+      await new Promise(res=>{
+        plugin.api.hasPermission(granted=>{ granted ? res() : plugin.api.requestPermission(()=>res()); });
+      });
+      const notifications = windows.map(w=>{
+        const id = notifIdFor(w.start);
+        ids.push(id);
+        return { id, title, text: body, trigger:{ at: w.start } };
+      });
+      if(notifications.length) plugin.api.schedule(notifications);
+    }
+    setScheduledIds(ids);
+    localStorage.setItem(LAST_SCHEDULE_KEY, String(Date.now()));
+  }catch(e){ console.error('Native notification scheduling failed', e); }
+}
+
+function toggleManual(){
+  const body = document.getElementById('manualBody');
+  const toggle = document.getElementById('manualToggle');
+  const isOpen = body.classList.contains('open');
+  if(isOpen){ body.classList.remove('open'); toggle.classList.remove('open'); }
+  else { body.classList.add('open'); toggle.classList.add('open'); }
+}
+
+// ===================== LOCATION & APP =====================
+function detectLocation(){
+  document.getElementById('locErr').textContent = 'Detecting location...';
+  if(!navigator.geolocation){
+    document.getElementById('locErr').textContent = 'Geolocation not available. Please enter coordinates manually.';
+    toggleManual(); return;
+  }
+  const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+  navigator.geolocation.getCurrentPosition(
+    pos => { LAT = pos.coords.latitude; LON = pos.coords.longitude; saveLocation(LAT, LON); startApp(); },
+    async err => {
+      document.getElementById('locErr').textContent = 'GPS failed. Trying IP fallback…';
+      const ok = await tryIpFallback();
+      if(!ok){ document.getElementById('locErr').textContent = 'Could not detect location. Enter coordinates manually.'; toggleManual(); }
+    }, geoOptions
+  );
+}
+
+async function tryIpFallback(){
+  try{
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=>controller.abort(), 6000);
+    const res = await fetch('https://ipapi.co/json/', {signal: controller.signal});
+    clearTimeout(timeoutId);
+    if(!res.ok) return false;
+    const data = await res.json();
+    if(data && typeof data.latitude === 'number' && typeof data.longitude === 'number'){
+      LAT = data.latitude; LON = data.longitude; saveLocation(LAT, LON);
+      document.getElementById('locErr').textContent = ''; startApp(); return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+function useManualLocation(){
+  const lat = parseFloat(document.getElementById('manLat').value);
+  const lon = parseFloat(document.getElementById('manLon').value);
+  if(isNaN(lat)||isNaN(lon)){ document.getElementById('locErr').textContent='Please enter valid numbers.'; return; }
+  if(lat<-90||lat>90||lon<-180||lon>180){ document.getElementById('locErr').textContent='Invalid range.'; return; }
+  LAT=lat; LON=lon; saveLocation(LAT, LON); startApp();
+}
+
+function resetLocation(){
+  clearLocation();
+  if(timer){ clearInterval(timer); timer=null; }
+  LAT=null; LON=null; prevSwar=null; prevTattva=null; cache={day:null};
+  document.getElementById('dash').style.display='none';
+  document.getElementById('gate').style.display='block';
+  document.getElementById('settingsBar').style.display='none';
+  document.getElementById('locErr').textContent='';
+  document.querySelectorAll('.card').forEach(c=>{
+    c.classList.remove('visible');
+    c.style.animationDelay = '0s'; 
+  });
+}
+
+// ==== STRICT Favourable Planner Computation ====
+function updatePlanner(){
+  if(LAT === null || LON === null) return;
+  const dateVal = document.getElementById('plannerDate').value;
+  if(!dateVal) return;
+  
+  const parts = dateVal.split('-');
+  const d = localNoon(new Date(parts[0], parts[1]-1, parts[2])); 
+  
+  const st = sunTimesFor(d, LAT, LON);
+  const ti = tithiInfo(toJD(st.sunrise));
+  const startSwar = startingSwarFromTithi(ti.paksha, ti.inPaksha);
+  
+  const swarBlocks = buildTimeline(st.sunrise, startSwar);
+  const tattvaBlocks = buildTattvaTimeline(st.sunrise);
+  
+  const gainEl = document.getElementById('plannerGain');
+  const releaseEl = document.getElementById('plannerRelease');
+  gainEl.innerHTML = '';
+  releaseEl.innerHTML = '';
+  
+  let gainCount = 0;
+  let releaseCount = 0;
+  
+  tattvaBlocks.forEach((slot, i) => {
+    const blockIdx = Math.floor(i / 5);
+    const swar = swarBlocks[blockIdx].swar;
+    
+    // 1. ATTRACTION & GAIN: Requires Left Swar + Earth or Water
+    if(swar === 'left' && (slot.tattva === 'prithvi' || slot.tattva === 'jal')) {
+      const div = document.createElement('div');
+      div.className = 'window-chip chip-left';
+      
+      const tLabel = slot.tattva === 'prithvi' ? 'Earth' : 'Water';
+      const tClass = slot.tattva === 'prithvi' ? 't-prithvi' : 't-jal';
+      
+      div.innerHTML = `
+        <div class="w-time">${fmtShortTime(slot.start)} – ${fmtShortTime(slot.end)}</div>
+        <div class="w-tattva ${tClass}">Left Swar · ${tLabel}</div>
+      `;
+      gainEl.appendChild(div);
+      gainCount++;
+    }
+    
+    // 2. HEALING & RELEASE: Requires Right Swar + Fire or Ether
+    else if(swar === 'right' && (slot.tattva === 'agni' || slot.tattva === 'akash')) {
+      const div = document.createElement('div');
+      div.className = 'window-chip chip-right';
+      
+      const tLabel = slot.tattva === 'agni' ? 'Fire' : 'Ether';
+      const tClass = slot.tattva === 'agni' ? 't-agni' : 't-akash';
+      
+      div.innerHTML = `
+        <div class="w-time">${fmtShortTime(slot.start)} – ${fmtShortTime(slot.end)}</div>
+        <div class="w-tattva ${tClass}">Right Swar · ${tLabel}</div>
+      `;
+      releaseEl.appendChild(div);
+      releaseCount++;
+    }
+  });
+  
+  if(gainCount === 0) gainEl.innerHTML = '<div style="color:var(--ink-muted);font-size:12px;padding-left:14px;">No windows found for this day.</div>';
+  if(releaseCount === 0) releaseEl.innerHTML = '<div style="color:var(--ink-muted);font-size:12px;padding-left:14px;">No windows found for this day.</div>';
+}
+
+function startApp(){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('dash').style.display='block';
+  document.getElementById('settingsBar').style.display='flex';
+  initAmbientCanvas();
+
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  document.getElementById('plannerDate').value = `${yyyy}-${mm}-${dd}`;
+  updatePlanner();
+
+  render();
+  timer = setInterval(render, 1000);
+  revealCards();
+  scheduleNativeNotifications(false);
+}
+
+function tryAutoStart(){
+  const saved = loadLocation();
+  if(saved){
+    LAT = saved.lat; LON = saved.lon;
+    notifyEnabled = loadNotifyPref();
+    document.getElementById('notifyGate').checked = notifyEnabled;
+    startApp();
+    return true;
+  }
+  return false;
+}
+
+function localNoon(date){
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
+}
+function fmtTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+function fmtShortTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+function fmtCountdown(target, now){
+  let s = Math.max(0, Math.round((target-now)/1000));
+  const m = Math.floor(s/60); s = s%60;
+  const h = Math.floor(m/60); const rm = m%60;
+  if(h>0) return h+'h '+String(rm).padStart(2,'0')+'m';
+  return m+'m '+String(s).padStart(2,'0')+'s';
+}
+
+let cache = { day:null, sunriseToday:null, sunriseYesterday:null, tithiToday:null, tithiYest:null };
+function refreshDailyCache(now){
+  const dayKey = now.toDateString();
+  if(cache.day===dayKey) return;
+  const today = localNoon(now);
+  const yesterday = new Date(today.getTime() - 86400000);
+  const st = sunTimesFor(today, LAT, LON);
+  const sy = sunTimesFor(yesterday, LAT, LON);
+  cache.sunriseToday = st.sunrise;
+  cache.sunriseYesterday = sy.sunrise;
+  cache.tithiToday = tithiInfo(toJD(st.sunrise));
+  cache.tithiYest = tithiInfo(toJD(sy.sunrise));
+  cache.day = dayKey;
+}
+
+function updateWheel(swar, tattva){
+  const ida = document.getElementById('idaArc');
+  const pin = document.getElementById('pingalaArc');
+  const wheel = document.getElementById('wheel');
+  const pulseRing = document.getElementById('pulseRing');
+  const orbitLeft = document.getElementById('orbitDotLeft');
+  const orbitRight = document.getElementById('orbitDotRight');
+  const targetOpacity = 0.9;
+  const inactiveOpacity = 0.1;
+  if(swar==='left'){
+    ida.setAttribute('opacity', targetOpacity); pin.setAttribute('opacity', inactiveOpacity);
+    wheel.classList.remove('wheel-glow-right'); wheel.classList.add('wheel-glow-left');
+    pulseRing.style.color = 'var(--ida)'; pulseRing.classList.add('active');
+    orbitLeft.setAttribute('opacity', '0.8'); orbitRight.setAttribute('opacity', '0');
+    if(!orbitLeft.dataset.animating){ orbitLeft.dataset.animating = 'true'; animateOrbit(orbitLeft, 0); }
+  } else {
+    ida.setAttribute('opacity', inactiveOpacity); pin.setAttribute('opacity', targetOpacity);
+    wheel.classList.remove('wheel-glow-left'); wheel.classList.add('wheel-glow-right');
+    pulseRing.style.color = 'var(--pingala)'; pulseRing.classList.add('active');
+    orbitLeft.setAttribute('opacity', '0'); orbitRight.setAttribute('opacity', '0.8');
+    if(!orbitRight.dataset.animating){ orbitRight.dataset.animating = 'true'; animateOrbit(orbitRight, 180); }
+  }
+}
+
+let orbitAngle = 0;
+function animateOrbit(el, offset){
+  orbitAngle += 0.4;
+  const angle = (orbitAngle + offset) * RAD;
+  el.setAttribute('cx', Math.cos(angle) * 92);
+  el.setAttribute('cy', Math.sin(angle) * 92);
+  requestAnimationFrame(() => animateOrbit(el, offset));
+}
+
+function animateValueChange(id, newText){
+  const el = document.getElementById(id);
+  if(!el || el.textContent === newText) return;
+  el.style.animation = 'none'; el.offsetHeight; 
+  el.textContent = newText;
+  el.style.animation = 'countPop 0.5s var(--ease-out-expo)';
+}
+
+function render(){
+  const now = new Date();
+  refreshDailyCache(now);
+  const jdNow = toJD(now);
+  
+  if(isNaN(jdNow) || !cache.sunriseToday) return; 
+
+  const state = computeSwarState(now, cache.sunriseToday, cache.sunriseYesterday, cache.tithiToday, cache.tithiYest);
+  const ti = tithiInfo(jdNow);
+  const ayan = lahiriAyanamsa(jdNow);
+  
+  const siderealMoon = norm360(moonLongitude(jdNow)-ayan);
+  const nakIdx = Math.max(0, Math.min(26, Math.floor(siderealMoon/(360/27)))); 
+  
+  const asc = ascendant(jdNow, LAT, LON);
+  const siderealAsc = norm360(asc-ayan);
+  const rashiIdx = Math.max(0, Math.min(11, Math.floor(siderealAsc/30))); 
+  const rashi = RASHI[rashiIdx];
+  const tinfo = TATTVA_INFO[state.tattva];
+
+  checkAuspiciousWindow(state);
+  updateWheel(state.swar, state.tattva);
+
+  let swarLabel, swarSub;
+  if(state.swar==='left'){ swarLabel='Left Swar'; swarSub='Ida / Chandra side dominant'; }
+  else { swarLabel='Right Swar'; swarSub='Pingala / Surya side dominant'; }
+  animateValueChange('swarName', swarLabel);
+  document.getElementById('swarSub').textContent = swarSub;
+  document.getElementById('heroCountdown').textContent = 'Next change in ' + fmtCountdown(state.nextSwarChange, now);
+
+  document.getElementById('swarSince').textContent = fmtTime(state.segStart);
+  document.getElementById('swarNext').textContent = fmtCountdown(state.nextSwarChange, now);
+  document.getElementById('sunriseVal').textContent = fmtTime(cache.sunriseToday);
+
+  const swarProgress = Math.min(100, ((now - state.segStart) / (state.nextSwarChange - state.segStart)) * 100);
+  const tattvaProgress = Math.min(100, ((now - new Date(state.nextTattvaChange.getTime() - state.TATTVA_SLOT_MIN*60000)) / (state.TATTVA_SLOT_MIN*60000)) * 100);
+  document.getElementById('swarProgress').style.width = swarProgress + '%';
+  document.getElementById('swarProgress').style.background = state.swar==='left' ? 'var(--ida)' : 'var(--pingala)';
+  document.getElementById('tattvaProgress').style.width = tattvaProgress + '%';
+  document.getElementById('tattvaProgress').style.background = tinfo.color;
+
+  const blocks = buildTimeline(state.ref, state.startSwar);
+  const tl = document.getElementById('timeline');
+  if(prevSwar !== state.swar || !tl.children.length){
+    tl.innerHTML = '';
+    blocks.forEach((b,i)=>{
+      const isNow = now>=b.start && now<b.end;
+      const div = document.createElement('div');
+      div.className = 'tl-block ' + (b.swar==='left'?'tl-left':'tl-right') + (isNow?' tl-now':'');
+      div.style.opacity = '0';
+      div.style.animation = 'fadeSlideUp 0.5s ' + (i*0.04) + 's var(--ease-out-expo) forwards';
+      div.innerHTML = '<div class="tl-swar">'+(b.swar==='left'?'Left':'Right')+'</div><div class="tl-time">'+fmtShortTime(b.start)+' – '+fmtShortTime(b.end)+'</div>';
+      tl.appendChild(div);
+    });
+  }
+
+  const tvSlots = buildTattvaTimeline(state.ref);
+  const tvEl = document.getElementById('tattvaTimeline');
+  if(prevTattva !== state.tattva || !tvEl.children.length){
+    tvEl.innerHTML = '';
+    tvSlots.forEach((s,i)=>{
+      const isNow = now>=s.start && now<s.end;
+      const info = TATTVA_INFO[s.tattva];
+      const div = document.createElement('div');
+      div.className = 'tv-block' + (isNow?' tl-now':'');
+      div.style.background = 'linear-gradient(135deg, ' + info.color + '10, ' + info.color + '03)';
+      div.style.borderColor = isNow ? info.color : 'var(--hairline)';
+      div.style.color = info.color;
+      div.style.opacity = '0';
+      div.style.animation = 'fadeSlideUp 0.4s ' + (i*0.015) + 's var(--ease-out-expo) forwards';
+      const progressWidth = isNow ? tattvaProgress + '%' : '0%';
+      div.innerHTML = '<div class="tv-name">'+info.label.split(' · ')[0]+'</div><div class="tv-time">'+fmtShortTime(s.start)+' – '+fmtShortTime(s.end)+'</div><div class="tv-progress" style="width:'+progressWidth+'"></div>';
+      tvEl.appendChild(div);
+    });
+  } else {
+    const activeBlock = tvEl.querySelector('.tl-now .tv-progress');
+    if(activeBlock) activeBlock.style.width = tattvaProgress + '%';
+  }
+
+  const chip = document.getElementById('tattvaChip');
+  if(chip.textContent !== tinfo.label){
+    chip.textContent = tinfo.label;
+    chip.style.color = tinfo.color;
+    chip.style.borderColor = tinfo.color + '35';
+    chip.style.background = 'linear-gradient(135deg, ' + tinfo.color + '08, ' + tinfo.color + '03)';
+  }
+  document.getElementById('tattvaDot').style.background = tinfo.color;
+  document.getElementById('tattvaDot').style.color = tinfo.color;
+  document.getElementById('tattvaMeaning').textContent = tinfo.meaning.split(' — ')[0];
+  document.getElementById('tattvaCountdown').textContent = fmtCountdown(state.nextTattvaChange, now);
+
+  document.getElementById('weekdayVal').textContent = now.toLocaleDateString([], {weekday:'long'});
+  document.getElementById('tithiVal').textContent = ti.paksha + ' · ' + TITHI_NAMES[ti.inPaksha-1];
+  document.getElementById('nakshatraVal').textContent = NAKSHATRA[nakIdx];
+
+  animateValueChange('lagnaVal', rashi);
+  document.getElementById('lagnaTheme').textContent = RASHI_THEME[rashi];
+  
+  // STRICT VERDICT ENFORCEMENT for Manifestation Timing section
+  function verdictFor(goalSwar, labelSwar, validTattvas, labelTattvas){
+    const isRightSwar = state.swar === goalSwar;
+    const isRightTattva = validTattvas.includes(state.tattva);
+    
+    if (isRightSwar && isRightTattva) {
+      return {tag:'excellent', text:'Excellent window active'};
+    } else if (isRightSwar && !isRightTattva) {
+      return {tag:'avoid', text:'Wait for ' + labelTattvas + ' element'};
+    } else if (!isRightSwar && isRightTattva) {
+      return {tag:'avoid', text:'Wait for ' + labelSwar};
+    } else {
+      return {tag:'avoid', text:'Wait for ' + labelSwar + ' & ' + labelTattvas};
+    }
+  }
+  
+  // Assign Earth/Water validation to Gain, and Fire/Ether to Release
+  const gv = verdictFor('left', 'Left Swar', ['prithvi', 'jal'], 'Earth/Water');
+  const rv = verdictFor('right', 'Right Swar', ['agni', 'akash'], 'Fire/Ether');
+  const vclass = {excellent:'v-excellent', good:'v-good', avoid:'v-avoid'};
+  
+  const gvEl = document.getElementById('gainVerdict');
+  const rvEl = document.getElementById('releaseVerdict');
+  if(gvEl.textContent !== gv.text){ gvEl.textContent=gv.text; gvEl.className='verdict '+vclass[gv.tag]; }
+  if(rvEl.textContent !== rv.text){ rvEl.textContent=rv.text; rvEl.className='verdict '+vclass[rv.tag]; }
+
+  let sarva = '';
+  if(state.swar==='left'){
+    sarva = 'Left Swar is active — favourable for beginnings, journeys, steady auspicious work, and anything you want to nourish or grow. Avoid travelling North or East during this window (per Shiv Swarodaya v.77).';
+  } else {
+    sarva = 'Right Swar is active — favourable for demanding, decisive, or combative tasks, entering a house, and cutting things off cleanly. Avoid travelling West or South during this window (per Shiv Swarodaya v.76).';
+  }
+  sarva += ' Element in flow — ' + tinfo.label + ': ' + tinfo.meaning;
+  sarva += ' Current lagna is ' + rashi + ', traditionally associated with questions about: ' + RASHI_THEME[rashi] + '.';
+  document.getElementById('sarvaText').textContent = sarva;
+
+  document.getElementById('clock').textContent = now.toLocaleString();
+
+  prevSwar = state.swar;
+  prevTattva = state.tattva;
+}
+
+function initAmbientCanvas(){
+  const canvas = document.getElementById('ambientCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let w, h;
+  function resize(){ w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  for(let i=0;i<50;i++){
+    particles.push({
+      x: Math.random()*w, y: Math.random()*h,
+      r: Math.random()*1.2+0.4,
+      dx: (Math.random()-0.5)*0.25,
+      dy: (Math.random()-0.5)*0.25,
+      opacity: Math.random()*0.35+0.1,
+      color: Math.random()>0.5 ? '125,211,252' : '251,191,36'
+    });
+  }
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    particles.forEach(p=>{
+      p.x += p.dx; p.y += p.dy;
+      if(p.x<0) p.x=w; if(p.x>w) p.x=0;
+      if(p.y<0) p.y=h; if(p.y>h) p.y=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = 'rgba('+p.color+','+p.opacity+')'; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function revealCards(){
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card, i) => {
+    const delay = card.dataset.delay || 0;
+    card.style.animationDelay = (delay * 0.09) + 's';
+    card.classList.add('visible'); 
+  });
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  notifyEnabled = loadNotifyPref();
+  document.getElementById('notifyGate').checked = notifyEnabled;
+  setTimeout(()=>{ if(!tryAutoStart()){ document.getElementById('notifyGate').checked = notifyEnabled; } }, 300);
+});
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && LAT!==null && LON!==null){
+    render();
+    scheduleNativeNotifications(false);
+  }
+});
+window.addEventListener('pageshow', ()=>{
+  if(LAT!==null && LON!==null) render();
+});
+</script>
+</body>
+</html>
