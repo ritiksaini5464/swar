@@ -191,9 +191,13 @@
 </header>
 <main>
   <div id="gate">
-    <p>This runs entirely on your device — no data leaves your browser. It needs your location to calculate sunrise, and works fully offline once loaded.</p>
-    <button class="btn" onclick="detectLocation()">📍 Detect my location</button>
+    <p>Sunrise calculations run on your device. Live location follows you while this page is visible. You can pause tracking or use manual coordinates. Automatic timezone lookup requires internet; offline, the last timezone is retained and marked for confirmation.</p>
+    <button class="btn" onclick="detectLocation()">Start live location</button>
     <div id="locErr"></div>
+    <label for="locationTimezone">Location timezone</label>
+    <input id="locationTimezone" list="timezoneOptions" placeholder="e.g. Asia/Kolkata" style="max-width:280px;width:100%;margin:12px auto;display:block;">
+    <datalist id="timezoneOptions"><option value="Asia/Kolkata"><option value="Europe/London"><option value="America/New_York"><option value="Australia/Sydney"><option value="Europe/Oslo"><option value="Pacific/Apia"><option value="UTC"></datalist>
+    <div class="hint">Required for manual coordinates. Leave blank for automatic timezone updates with live GPS. Enter a timezone to keep it fixed. Live GPS works while this page is visible; updates apply after about 1 km of movement. Automatic timezone lookup sends rounded coordinates to Open-Meteo. IP fallback contacts ipapi.co if GPS fails.</div>
     <label class="notify-opt" for="notifyGate" onclick="event.preventDefault(); toggleNotifyGate()">
       <div class="bell-icon" id="bellGate">🔔</div>
       <div class="notify-text">
@@ -216,6 +220,8 @@
     </div>
   </div>
   <div id="dash">
+    <p id="locationStatus" role="status" style="text-align:center;font-size:12px;color:var(--ink-muted);"></p>
+    <p id="solarStatus" role="status" hidden style="padding:24px;text-align:center;"></p>
     <div class="hero-section">
       <div class="wheel-container">
         <div class="wheel-ring"></div>
@@ -263,6 +269,8 @@
         <span>Auspicious alerts</span>
       </div>
       <div class="divider"></div>
+      <span id="timezoneLabel" class="setting-item"></span>
+      <button class="setting-item" id="liveLocationToggle" type="button" onclick="toggleLiveLocation()" style="background:transparent;border:0;color:inherit;font:inherit;">Start live GPS</button>
       <div class="setting-item" onclick="resetLocation()">
         <span>🔄</span>
         <span>Change location</span>
@@ -346,7 +354,7 @@
   </div>
 </main>
 <footer>
-  Calculations use standard low-precision solar/lunar longitude formulas and the sunrise equation — accurate to within a few minutes/degrees, sufficient for swar and tattva timing, not for scientific ephemeris use. Ayanamsa: Lahiri (approx). Interpretations are drawn from the Shiv Swarodaya text and traditional swar-yoga notes; they describe a spiritual practice, not a factual claim. Location and time never leave this page.
+  Calculations use standard low-precision solar/lunar longitude formulas and the sunrise equation — accurate to within a few minutes/degrees, sufficient for swar and tattva timing, not for scientific ephemeris use. Ayanamsa: Lahiri (approx). Interpretations are drawn from the Shiv Swarodaya text and traditional swar-yoga notes; they describe a spiritual practice, not a factual claim. Sunrise calculations stay on this page. Live GPS auto-timezone lookup sends coordinates rounded to 3 decimals to <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>; IP fallback contacts ipapi.co when GPS fails. Location, timezone and live-tracking preference are saved on your device.
 </footer>
 <script>
 const RAD = Math.PI/180;
@@ -354,23 +362,55 @@ function norm360(x){ x = x % 360; return x<0 ? x+360 : x; }
 function toJD(date){ return date.getTime()/86400000 + 2440587.5; }
 function fromJD(jd){ return new Date((jd-2440587.5)*86400000); }
 
+function solar(jd){
+ const t=(jd-2451545)/36525;
+ const l=((280.46646+t*(36000.76983+t*.0003032))%360+360)%360;
+ const m=357.52911+t*(35999.05029-.0001537*t);
+ const e=.016708634-t*(.000042037+.0000001267*t);
+ const c=Math.sin(m*RAD)*(1.914602-t*(.004817+.000014*t))+Math.sin(2*m*RAD)*(.019993-.000101*t)+Math.sin(3*m*RAD)*.000289;
+ const omega=125.04-1934.136*t;
+ const lambda=l+c-.00569-.00478*Math.sin(omega*RAD);
+ const eps=23+(26+(21.448-t*(46.815+t*(.00059-t*.001813)))/60)/60+.00256*Math.cos(omega*RAD);
+ const decl=Math.asin(Math.sin(eps*RAD)*Math.sin(lambda*RAD));
+ const y=Math.tan(eps*RAD/2)**2;
+ const eq=4*(180/Math.PI)*(y*Math.sin(2*l*RAD)-2*e*Math.sin(m*RAD)+4*e*y*Math.sin(m*RAD)*Math.cos(2*l*RAD)-.5*y*y*Math.sin(4*l*RAD)-1.25*e*e*Math.sin(2*m*RAD));
+ return {decl,eq};
+}
+
+// dateLocalNoon encodes the selected civil date at 12:00 UTC.
 function sunTimesFor(dateLocalNoon, lat, lon){
-  const JD = toJD(dateLocalNoon);
-  const n = Math.floor(JD - 2451545.0 + 0.0008);
-  const Jstar = n - lon/360;
-  const M = norm360(357.5291 + 0.98560028*Jstar);
-  const Mr = M*RAD;
-  const C = 1.9148*Math.sin(Mr) + 0.0200*Math.sin(2*Mr) + 0.0003*Math.sin(3*Mr);
-  const lambda = norm360(M + C + 180 + 102.9372);
-  const lr = lambda*RAD;
-  const Jtransit = 2451545.0 + Jstar + 0.0053*Math.sin(Mr) - 0.0069*Math.sin(2*lr);
-  const delta = Math.asin(Math.sin(lr)*Math.sin(23.44*RAD));
-  const cosOmega = (Math.sin(-0.83*RAD) - Math.sin(lat*RAD)*Math.sin(delta)) / (Math.cos(lat*RAD)*Math.cos(delta));
-  const clamped = Math.min(1, Math.max(-1, cosOmega));
-  const omega = Math.acos(clamped)/RAD;
-  const Jset = 2451545.0 + Jstar + 0.0053*Math.sin(Mr) - 0.0069*Math.sin(2*lr) + omega/360;
-  const Jrise = Jtransit - (Jset - Jtransit);
-  return { sunrise: fromJD(Jrise), sunset: fromJD(Jset) };
+  const midnight = Date.UTC(dateLocalNoon.getUTCFullYear(), dateLocalNoon.getUTCMonth(), dateLocalNoon.getUTCDate());
+  const targetDate = new Date(midnight).toISOString().slice(0,10);
+  function event(base, rising){
+    const jd = base/86400000 + 2440587.5;
+    let minutes = 720 - 4*lon;
+    for(let i=0; i<8; i++){
+      const {decl,eq} = solar(jd + minutes/1440);
+      const numerator = Math.sin(-0.833*RAD) - Math.sin(lat*RAD)*Math.sin(decl);
+      const denominator = Math.cos(lat*RAD)*Math.cos(decl);
+      if(Math.abs(denominator)<1e-12) return {time:null, status:numerator<0?'polar-day':'polar-night'};
+      const cos = numerator/denominator;
+      // Do not clamp: outside [-1,1] means no horizon crossing.
+      if(cos>1) return {time:null, status:'polar-night'};
+      if(cos< -1) return {time:null, status:'polar-day'};
+      const next = 720 - 4*(lon + (rising?1:-1)*Math.acos(cos)/RAD) - eq;
+      if(Math.abs(next-minutes)<1e-7){ minutes=next; break; }
+      minutes=next;
+    }
+    return {time:new Date(base+minutes*60000), status:'normal'};
+  }
+  function onSelectedDate(rising){
+    const initial=event(midnight,rising);
+    if(initial.time && locationDateKey(initial.time)===targetDate) return initial;
+    // Civil timezones can be on the opposite side of the date line from longitude.
+    for(const shift of [-1,1]){
+      const candidate=event(midnight+shift*86400000,rising);
+      if(candidate.time && locationDateKey(candidate.time)===targetDate) return candidate;
+    }
+    return initial.time ? {time:null,status:'no-event'} : initial;
+  }
+  const rise=onSelectedDate(true), set=onSelectedDate(false);
+  return {sunrise:rise.time, sunset:set.time, status:rise.status};
 }
 
 function sunLongitude(JD){
@@ -496,9 +536,10 @@ const TATTVA_INFO = {
   akash:{label:'Akash · Ether', color:'var(--ether)', meaning:'Empty of worldly fruit — good only for meditation, fruitless for material aims.'}
 };
 
-let LAT=null, LON=null, timer=null, prevSwar=null, prevTattva=null;
+let LAT=null, LON=null, TIME_ZONE=null, timer=null, prevSwar=null, prevTattva=null;
 
 const STORAGE_KEYS = {
+  TZ: 'swar_timezone',
   LAT: 'swar_lat',
   LON: 'swar_lon',
   NOTIFY: 'swar_notify',
@@ -506,19 +547,21 @@ const STORAGE_KEYS = {
 };
 
 function saveLocation(lat, lon){
-  try{ localStorage.setItem(STORAGE_KEYS.LAT, String(lat)); localStorage.setItem(STORAGE_KEYS.LON, String(lon)); }
+  try{ localStorage.setItem(STORAGE_KEYS.LAT, String(lat)); localStorage.setItem(STORAGE_KEYS.LON, String(lon)); localStorage.setItem(STORAGE_KEYS.TZ, TIME_ZONE); }
   catch(e){}
 }
 function loadLocation(){
   try{
     const lat = parseFloat(localStorage.getItem(STORAGE_KEYS.LAT));
     const lon = parseFloat(localStorage.getItem(STORAGE_KEYS.LON));
-    if(!isNaN(lat) && !isNaN(lon) && lat>=-90 && lat<=90 && lon>=-180 && lon<=180) return {lat, lon};
+    const timeZone=localStorage.getItem(STORAGE_KEYS.TZ);
+    if(!isNaN(lat) && !isNaN(lon) && lat>=-90 && lat<=90 && lon>=-180 && lon<=180 && validTimeZone(timeZone)) return {lat, lon, timeZone};
   }catch(e){}
   return null;
 }
 function clearLocation(){
   try{
+    localStorage.removeItem(STORAGE_KEYS.TZ);
     localStorage.removeItem(STORAGE_KEYS.LAT);
     localStorage.removeItem(STORAGE_KEYS.LON);
     localStorage.removeItem(STORAGE_KEYS.LAST_NOTIFY_KEY);
@@ -605,7 +648,7 @@ function showToast(title, body, duration=7000){
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = '<button class="toast-close" onclick="dismissToast(this)">×</button><div class="toast-title">✦ '+title+'</div><div class="toast-body">'+body+'</div><div class="toast-time">'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</div>';
+  toast.innerHTML = '<button class="toast-close" onclick="dismissToast(this)">×</button><div class="toast-title">✦ '+title+'</div><div class="toast-body">'+body+'</div><div class="toast-time">'+fmtShortTime(new Date())+'</div>';
   container.appendChild(toast);
   setTimeout(()=>{ if(toast.parentElement) dismissToast(toast.querySelector('.toast-close')); }, duration);
 }
@@ -680,6 +723,7 @@ function computeUpcomingAuspiciousWindows(daysAhead){
   for(let d=-1; d<=daysAhead; d++){
     const dayAnchor = new Date(localNoon(now).getTime() + d*86400000);
     const st = sunTimesFor(dayAnchor, LAT, LON);
+    if(!st.sunrise) continue;
     const ti = tithiInfo(toJD(st.sunrise));
     const startSwar = startingSwarFromTithi(ti.paksha, ti.inPaksha);
     const tvSlots = buildTattvaTimeline(st.sunrise);
@@ -709,7 +753,12 @@ async function cancelNativeNotifications(){
   setScheduledIds([]);
 }
 
-async function scheduleNativeNotifications(force){
+let notificationQueue=Promise.resolve();
+function scheduleNativeNotifications(force){
+  notificationQueue=notificationQueue.catch(()=>{}).then(()=>scheduleNativeNotificationsNow(force));
+  return notificationQueue;
+}
+async function scheduleNativeNotificationsNow(force){
   if(!notifyEnabled || LAT===null || LON===null) return;
   const plugin = getNativeNotificationPlugin();
   if(!plugin) return; 
@@ -761,24 +810,169 @@ function toggleManual(){
 }
 
 // ===================== LOCATION & APP =====================
-function detectLocation(){
-  document.getElementById('locErr').textContent = 'Detecting location...';
+const LIVE_LOCATION_KEY='swar_live_location';
+const LIVE_TZ_OVERRIDE_KEY='swar_live_timezone_override';
+const LOCATION_DISTANCE_M=1000;
+const LOCATION_INTERVAL_MS=60000;
+let appStarted=false, locationWatchId=null, locationEpoch=0;
+let locationRequest=0, locationAbort=null, lastGpsFix=null, lastGpsApplied=0;
+let ipFallbackAttempted=false, liveTimezoneOverride=null;
+let pendingPositionTimer=null, lastPositionTimestamp=0, timezonePending=false;
+
+function loadLivePreference(){
+  try{ return localStorage.getItem(LIVE_LOCATION_KEY)==='true'; }catch(e){ return false; }
+}
+function setLivePreference(enabled){
+  try{ localStorage.setItem(LIVE_LOCATION_KEY,String(enabled)); }catch(e){}
+}
+function setLocationStatus(message){
+  document.getElementById('locationStatus').textContent=message;
+  document.getElementById('liveLocationToggle').textContent=loadLivePreference()?'Pause live GPS':'Start live GPS';
+  document.getElementById('liveLocationToggle').setAttribute('aria-pressed',String(loadLivePreference()));
+}
+function distanceMeters(lat1,lon1,lat2,lon2){
+  const dlat=(lat2-lat1)*RAD, dlon=(lon2-lon1)*RAD;
+  const a=Math.sin(dlat/2)**2+Math.cos(lat1*RAD)*Math.cos(lat2*RAD)*Math.sin(dlon/2)**2;
+  return 6371000*2*Math.asin(Math.sqrt(Math.min(1,a)));
+}
+function stopLiveLocation(suspend=false){
+  locationEpoch++; locationRequest++;
+  if(locationWatchId!==null && navigator.geolocation) navigator.geolocation.clearWatch(locationWatchId);
+  locationWatchId=null;
+  if(locationAbort) locationAbort.abort();
+  locationAbort=null;
+  if(pendingPositionTimer!==null) clearTimeout(pendingPositionTimer);
+  pendingPositionTimer=null;
+  if(!suspend) setLivePreference(false);
+  setLocationStatus(suspend && loadLivePreference()?'Live GPS suspended while page is hidden':'Live GPS paused; using last location');
+}
+function detectLocation(){ startLiveLocation(true); }
+function toggleLiveLocation(){
+  if(loadLivePreference()) stopLiveLocation();
+  else startLiveLocation(false);
+}
+function startLiveLocation(fromGate=false){
+  if(locationWatchId!==null) return;
   if(!navigator.geolocation){
-    document.getElementById('locErr').textContent = 'Geolocation not available. Please enter coordinates manually.';
-    toggleManual(); return;
+    document.getElementById('locErr').textContent='GPS is unavailable. Use manual coordinates.';
+    setLocationStatus('GPS unavailable'); return;
   }
-  const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-  navigator.geolocation.getCurrentPosition(
-    pos => { LAT = pos.coords.latitude; LON = pos.coords.longitude; saveLocation(LAT, LON); startApp(); },
-    async err => {
-      document.getElementById('locErr').textContent = 'GPS failed. Trying IP fallback…';
-      const ok = await tryIpFallback();
-      if(!ok){ document.getElementById('locErr').textContent = 'Could not detect location. Enter coordinates manually.'; toggleManual(); }
-    }, geoOptions
+  if(fromGate){
+    const entered=document.getElementById('locationTimezone').value.trim();
+    if(entered && !validTimeZone(entered)){
+      document.getElementById('locErr').textContent='Enter a valid timezone or leave it blank for automatic detection.'; return;
+    }
+    liveTimezoneOverride=entered||null;
+    try{ localStorage.setItem(LIVE_TZ_OVERRIDE_KEY,liveTimezoneOverride||''); }catch(e){}
+  }else{
+    try{ liveTimezoneOverride=localStorage.getItem(LIVE_TZ_OVERRIDE_KEY)||null; }catch(e){ liveTimezoneOverride=null; }
+    if(!validTimeZone(liveTimezoneOverride)) liveTimezoneOverride=null;
+  }
+  const epoch=++locationEpoch;
+  lastGpsFix=null; lastGpsApplied=0; lastPositionTimestamp=0; ipFallbackAttempted=false;
+  setLivePreference(true);
+  setLocationStatus('Waiting for GPS permission/location...');
+  document.getElementById('locErr').textContent='Waiting for GPS permission/location...';
+  try{
+    locationWatchId=navigator.geolocation.watchPosition(
+      pos=>applyLivePosition(pos,epoch),
+      error=>handleLiveLocationError(error,epoch),
+      {enableHighAccuracy:true,timeout:15000,maximumAge:30000}
+    );
+  }catch(e){
+    stopLiveLocation();
+    document.getElementById('locErr').textContent='GPS could not start. Open the HTTPS site and allow location access, or enter coordinates manually.';
+    setLocationStatus('GPS could not start');
+  }
+}
+async function timezoneAtCoordinates(lat,lon){
+  const controller=new AbortController();
+  locationAbort=controller;
+  const timeout=setTimeout(()=>controller.abort(),6000);
+  try{
+    const params=new URLSearchParams({latitude:lat.toFixed(3),longitude:lon.toFixed(3),timezone:'auto',forecast_days:'1'});
+    const response=await fetch('https://api.open-meteo.com/v1/forecast?'+params,{signal:controller.signal});
+    if(!response.ok) throw new Error('Timezone lookup failed');
+    const data=await response.json();
+    if(!validTimeZone(data.timezone)) throw new Error('Invalid timezone response');
+    return data.timezone;
+  }finally{
+    clearTimeout(timeout);
+    if(locationAbort===controller) locationAbort=null;
+  }
+}
+function refreshLocationReadings(){
+  const oldToday=cache.day;
+  const planner=document.getElementById('plannerDate');
+  if(!planner.value || planner.value===oldToday) planner.value=locationDateKey(new Date());
+  cache={day:null}; prevSwar=null; prevTattva=null;
+  document.getElementById('timeline').innerHTML='';
+  document.getElementById('tattvaTimeline').innerHTML='';
+  document.getElementById('timezoneLabel').textContent=TIME_ZONE;
+  updatePlanner(); render(); scheduleNativeNotifications(true);
+}
+async function applyLivePosition(position,epoch){
+  if(epoch!==locationEpoch || !loadLivePreference()) return;
+  const {latitude:lat,longitude:lon,accuracy}=position.coords;
+  const now=Date.now();
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180) return;
+  if(position.timestamp && now-position.timestamp>120000) return;
+  if(!Number.isFinite(accuracy)||accuracy>1500){
+    setLocationStatus('GPS signal is too approximate; keeping the last location.'); return;
+  }
+  if(position.timestamp && position.timestamp<lastPositionTimestamp) return;
+  lastPositionTimestamp=position.timestamp || now;
+  const moved=!lastGpsFix || distanceMeters(lastGpsFix.lat,lastGpsFix.lon,lat,lon)>=Math.max(LOCATION_DISTANCE_M,accuracy);
+  const retryTimezone=timezonePending && now-lastGpsApplied>=300000;
+  if(!moved && !retryTimezone){
+    if(pendingPositionTimer!==null) clearTimeout(pendingPositionTimer);
+    pendingPositionTimer=null;
+    if(locationAbort){locationRequest++;locationAbort.abort();locationAbort=null;}
+    return;
+  }
+  if(lastGpsFix && now-lastGpsApplied<LOCATION_INTERVAL_MS){
+    if(pendingPositionTimer!==null) clearTimeout(pendingPositionTimer);
+    pendingPositionTimer=setTimeout(()=>{pendingPositionTimer=null;applyLivePosition(position,epoch);},LOCATION_INTERVAL_MS-(now-lastGpsApplied));
+    return;
+  }
+  if(pendingPositionTimer!==null) clearTimeout(pendingPositionTimer);
+  pendingPositionTimer=null;
+  const request=++locationRequest;
+  if(locationAbort) locationAbort.abort();
+  let tz=liveTimezoneOverride, timezoneConfirmed=Boolean(tz);
+  if(!tz){
+    try{ tz=await timezoneAtCoordinates(lat,lon); timezoneConfirmed=true; }
+    catch(e){ tz=TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone; }
+  }
+  if(epoch!==locationEpoch || request!==locationRequest || !loadLivePreference()) return;
+  LAT=lat; LON=lon; TIME_ZONE=tz;
+  timezonePending=!timezoneConfirmed;
+  lastGpsFix={lat,lon}; lastGpsApplied=now;
+  saveLocation(lat,lon);
+  document.getElementById('locErr').textContent='';
+  if(appStarted) refreshLocationReadings(); else startApp();
+  setLocationStatus('Live GPS: '+lat.toFixed(4)+', '+lon.toFixed(4)+' (accuracy about '+Math.round(accuracy)+' m). Updated '+fmtShortTime(new Date())+'. '+
+    (liveTimezoneOverride?'Timezone fixed: '+tz+'.':timezoneConfirmed?'Timezone: '+tz+'.':'Timezone not confirmed online; using '+tz+'. Choose Change location to set it manually.')
   );
 }
+async function handleLiveLocationError(error,epoch){
+  if(epoch!==locationEpoch) return;
+  if(error.code===1){
+    stopLiveLocation();
+    document.getElementById('locErr').textContent='Location permission denied. Enable it in your browser or enter coordinates manually.';
+    setLocationStatus('GPS permission denied; using last location if available');
+    return;
+  }
+  setLocationStatus('GPS unavailable; waiting for a better signal.');
+  if(!appStarted && !ipFallbackAttempted){
+    ipFallbackAttempted=true;
+    const ok=await tryIpFallback(epoch);
+    if(epoch!==locationEpoch) return;
+    if(!ok) document.getElementById('locErr').textContent='Could not detect location yet. Enter coordinates manually, or wait for GPS.';
+  }
+}
 
-async function tryIpFallback(){
+async function tryIpFallback(epoch=locationEpoch){
   try{
     const controller = new AbortController();
     const timeoutId = setTimeout(()=>controller.abort(), 6000);
@@ -786,9 +980,12 @@ async function tryIpFallback(){
     clearTimeout(timeoutId);
     if(!res.ok) return false;
     const data = await res.json();
-    if(data && typeof data.latitude === 'number' && typeof data.longitude === 'number'){
+    if(epoch!==locationEpoch || appStarted) return false;
+    if(data && typeof data.latitude === 'number' && typeof data.longitude === 'number' && validTimeZone(selectedTimeZone() || data.timezone)){
+      TIME_ZONE = selectedTimeZone() || data.timezone;
       LAT = data.latitude; LON = data.longitude; saveLocation(LAT, LON);
-      document.getElementById('locErr').textContent = ''; startApp(); return true;
+      document.getElementById('locErr').textContent = ''; startApp();
+      setLocationStatus('IP estimate; GPS not yet available.'); return true;
     }
   }catch(e){}
   return false;
@@ -799,13 +996,22 @@ function useManualLocation(){
   const lon = parseFloat(document.getElementById('manLon').value);
   if(isNaN(lat)||isNaN(lon)){ document.getElementById('locErr').textContent='Please enter valid numbers.'; return; }
   if(lat<-90||lat>90||lon<-180||lon>180){ document.getElementById('locErr').textContent='Invalid range.'; return; }
-  LAT=lat; LON=lon; saveLocation(LAT, LON); startApp();
+  const tz=selectedTimeZone();
+  if(!tz){ document.getElementById('locErr').textContent='Choose the timezone for these coordinates (for example Asia/Kolkata or Europe/London).'; return; }
+  stopLiveLocation();
+  TIME_ZONE=tz; LAT=lat; LON=lon; saveLocation(LAT, LON);
+  if(appStarted) refreshLocationReadings(); else startApp();
+  setLocationStatus('Manual location');
 }
 
 function resetLocation(){
+  stopLiveLocation();
+  appStarted=false;
   clearLocation();
   if(timer){ clearInterval(timer); timer=null; }
-  LAT=null; LON=null; prevSwar=null; prevTattva=null; cache={day:null};
+  notificationQueue=notificationQueue.catch(()=>{}).then(()=>cancelNativeNotifications());
+  try{ localStorage.removeItem(LAST_SCHEDULE_KEY); }catch(e){}
+  LAT=null; LON=null; TIME_ZONE=null; prevSwar=null; prevTattva=null; cache={day:null};
   document.getElementById('dash').style.display='none';
   document.getElementById('gate').style.display='block';
   document.getElementById('settingsBar').style.display='none';
@@ -823,9 +1029,14 @@ function updatePlanner(){
   if(!dateVal) return;
   
   const parts = dateVal.split('-');
-  const d = localNoon(new Date(parts[0], parts[1]-1, parts[2])); 
+  const d = new Date(Date.UTC(Number(parts[0]), Number(parts[1])-1, Number(parts[2]), 12)); 
   
   const st = sunTimesFor(d, LAT, LON);
+  if(!st.sunrise){
+    document.getElementById('plannerGain').textContent = solarStatusText(st.status);
+    document.getElementById('plannerRelease').textContent = 'Sunrise-based windows are unavailable for this date.';
+    return;
+  }
   const ti = tithiInfo(toJD(st.sunrise));
   const startSwar = startingSwarFromTithi(ti.paksha, ti.inPaksha);
   
@@ -882,41 +1093,58 @@ function updatePlanner(){
 }
 
 function startApp(){
+  if(appStarted) return;
+  appStarted=true;
   document.getElementById('gate').style.display='none';
   document.getElementById('dash').style.display='block';
   document.getElementById('settingsBar').style.display='flex';
   initAmbientCanvas();
 
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth()+1).padStart(2,'0');
-  const dd = String(today.getDate()).padStart(2,'0');
-  document.getElementById('plannerDate').value = `${yyyy}-${mm}-${dd}`;
+  document.getElementById('plannerDate').value = locationDateKey(new Date());
+  document.getElementById('timezoneLabel').textContent = TIME_ZONE;
   updatePlanner();
 
   render();
   timer = setInterval(render, 1000);
   revealCards();
-  scheduleNativeNotifications(false);
+  scheduleNativeNotifications(true);
 }
 
 function tryAutoStart(){
   const saved = loadLocation();
   if(saved){
-    LAT = saved.lat; LON = saved.lon;
+    LAT = saved.lat; LON = saved.lon; TIME_ZONE = saved.timeZone;
     notifyEnabled = loadNotifyPref();
     document.getElementById('notifyGate').checked = notifyEnabled;
     startApp();
+    if(loadLivePreference()) startLiveLocation(false);
+    else setLocationStatus('Saved location; live GPS paused');
     return true;
   }
   return false;
 }
 
-function localNoon(date){
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
+function validTimeZone(tz){
+  if(typeof tz!=='string' || !tz.trim()) return false;
+  try{ new Intl.DateTimeFormat('en',{timeZone:tz}); return true; }catch(e){ return false; }
 }
-function fmtTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
-function fmtShortTime(d){ return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+function selectedTimeZone(){
+  const value=document.getElementById('locationTimezone').value.trim();
+  return validTimeZone(value)?value:null;
+}
+function locationDateKey(date){
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:TIME_ZONE || 'UTC',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+  const value=type=>parts.find(p=>p.type===type).value;
+  return value('year')+'-'+value('month')+'-'+value('day');
+}
+function localNoon(date){ return new Date(locationDateKey(date)+'T12:00:00Z'); }
+function fmtTime(d){ return d.toLocaleTimeString([], {timeZone:TIME_ZONE, hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+function fmtShortTime(d){ return d.toLocaleTimeString([], {timeZone:TIME_ZONE, hour:'2-digit', minute:'2-digit'}); }
+function solarStatusText(status){
+  if(status==='polar-day') return 'No sunrise on this date: midnight sun.';
+  if(status==='polar-night') return 'No sunrise on this date: polar night.';
+  return 'No sunrise on this date.';
+}
 function fmtCountdown(target, now){
   let s = Math.max(0, Math.round((target-now)/1000));
   const m = Math.floor(s/60); s = s%60;
@@ -927,7 +1155,7 @@ function fmtCountdown(target, now){
 
 let cache = { day:null, sunriseToday:null, sunriseYesterday:null, tithiToday:null, tithiYest:null };
 function refreshDailyCache(now){
-  const dayKey = now.toDateString();
+  const dayKey = locationDateKey(now);
   if(cache.day===dayKey) return;
   const today = localNoon(now);
   const yesterday = new Date(today.getTime() - 86400000);
@@ -935,8 +1163,9 @@ function refreshDailyCache(now){
   const sy = sunTimesFor(yesterday, LAT, LON);
   cache.sunriseToday = st.sunrise;
   cache.sunriseYesterday = sy.sunrise;
-  cache.tithiToday = tithiInfo(toJD(st.sunrise));
-  cache.tithiYest = tithiInfo(toJD(sy.sunrise));
+  cache.solarStatus = st.status;
+  cache.tithiToday = st.sunrise ? tithiInfo(toJD(st.sunrise)) : null;
+  cache.tithiYest = sy.sunrise ? tithiInfo(toJD(sy.sunrise)) : null;
   cache.day = dayKey;
 }
 
@@ -986,7 +1215,20 @@ function render(){
   refreshDailyCache(now);
   const jdNow = toJD(now);
   
-  if(isNaN(jdNow) || !cache.sunriseToday) return; 
+  if(isNaN(jdNow)) return;
+  const unavailable = !cache.sunriseToday || (now<cache.sunriseToday && !cache.sunriseYesterday);
+  const statusEl=document.getElementById('solarStatus');
+  statusEl.hidden=!unavailable;
+  document.querySelector('#dash .hero-section').style.display=unavailable?'none':'';
+  document.querySelector('#dash .grid').style.display=unavailable?'none':'';
+  document.getElementById('clock').textContent=now.toLocaleString([], {timeZone:TIME_ZONE})+' ('+TIME_ZONE+')';
+  if(unavailable){
+    statusEl.textContent = !cache.sunriseToday ? solarStatusText(cache.solarStatus)+' Sunrise-based swar and tattva readings are unavailable.' : 'Sunrise-based readings will resume at '+fmtTime(cache.sunriseToday)+'. The previous date had no sunrise.';
+    document.getElementById('timeline').innerHTML='';
+    document.getElementById('tattvaTimeline').innerHTML='';
+    prevSwar=null; prevTattva=null;
+    return;
+  } 
 
   const state = computeSwarState(now, cache.sunriseToday, cache.sunriseYesterday, cache.tithiToday, cache.tithiYest);
   const ti = tithiInfo(jdNow);
@@ -1072,7 +1314,7 @@ function render(){
   document.getElementById('tattvaMeaning').textContent = tinfo.meaning.split(' — ')[0];
   document.getElementById('tattvaCountdown').textContent = fmtCountdown(state.nextTattvaChange, now);
 
-  document.getElementById('weekdayVal').textContent = now.toLocaleDateString([], {weekday:'long'});
+  document.getElementById('weekdayVal').textContent = now.toLocaleDateString([], {timeZone:TIME_ZONE, weekday:'long'});
   document.getElementById('tithiVal').textContent = ti.paksha + ' · ' + TITHI_NAMES[ti.inPaksha-1];
   document.getElementById('nakshatraVal').textContent = NAKSHATRA[nakIdx];
 
@@ -1115,7 +1357,7 @@ function render(){
   sarva += ' Current lagna is ' + rashi + ', traditionally associated with questions about: ' + RASHI_THEME[rashi] + '.';
   document.getElementById('sarvaText').textContent = sarva;
 
-  document.getElementById('clock').textContent = now.toLocaleString();
+  document.getElementById('clock').textContent = now.toLocaleString([], {timeZone:TIME_ZONE})+' ('+TIME_ZONE+')';
 
   prevSwar = state.swar;
   prevTattva = state.tattva;
@@ -1162,18 +1404,28 @@ function revealCards(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  if(typeof Intl.supportedValuesOf==='function'){
+    const options=document.getElementById('timezoneOptions');
+    for(const tz of Intl.supportedValuesOf('timeZone')){
+      const option=document.createElement('option'); option.value=tz; options.appendChild(option);
+    }
+  }
   notifyEnabled = loadNotifyPref();
   document.getElementById('notifyGate').checked = notifyEnabled;
   setTimeout(()=>{ if(!tryAutoStart()){ document.getElementById('notifyGate').checked = notifyEnabled; } }, 300);
 });
 
 document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible'){ stopLiveLocation(true); return; }
+  if(appStarted && loadLivePreference()) startLiveLocation(false);
   if(document.visibilityState === 'visible' && LAT!==null && LON!==null){
     render();
     scheduleNativeNotifications(false);
   }
 });
+window.addEventListener('pagehide', ()=>stopLiveLocation(true));
 window.addEventListener('pageshow', ()=>{
+  if(appStarted && loadLivePreference()) startLiveLocation(false);
   if(LAT!==null && LON!==null) render();
 });
 </script>
