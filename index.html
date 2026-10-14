@@ -82,15 +82,17 @@
   .wheel-caption .swarname{font-size:30px; font-weight:300; letter-spacing:-0.02em; margin:4px 0; transition:all 0.5s ease;}
   .wheel-caption .sub{color:var(--ink-muted); font-size:13px; margin-top:4px;}
   .wheel-caption .countdown-hero{font-size:12px; color:var(--ink-dim); margin-top:8px; font-variant-numeric:tabular-nums; letter-spacing:0.05em;}
-  .settings-bar{display:flex; align-items:center; justify-content:center; gap:12px; margin:0 auto 24px; padding:10px 20px; max-width:400px; background:var(--bg-card); border:1px solid var(--hairline); border-radius:999px; font-size:12.5px; font-weight:600; transition:all 0.3s var(--ease-out-expo);}
-  .settings-bar .setting-item{display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border-radius:999px; transition:all 0.2s; color:var(--ink-muted); user-select:none; min-height:36px;}
+  .settings-bar{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 auto 24px; padding:10px; width:100%; max-width:560px; box-sizing:border-box; background:var(--bg-card); border:1px solid var(--hairline); border-radius:16px; font-size:12.5px; font-weight:600;}
+  .settings-bar .setting-item{display:flex; align-items:center; justify-content:center; gap:7px; min-width:0; min-height:44px; padding:8px 10px; box-sizing:border-box; border:1px solid var(--hairline); border-radius:10px; background:transparent; font:inherit; color:var(--ink-muted); cursor:pointer; text-align:center; line-height:1.35; transition:background 0.2s,color 0.2s;}
   .settings-bar .setting-item:hover{background:var(--bg-elevated); color:var(--ink);}
+  .settings-bar .setting-item:focus-visible{outline:2px solid var(--ida); outline-offset:2px;}
   .settings-bar .setting-item.on{color:var(--good);}
   .settings-bar .setting-item.on:hover{background:rgba(74,222,128,0.08);}
-  .settings-bar .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .settings-bar .dot{width:7px; height:7px; flex:0 0 7px; border-radius:50%; display:inline-block;}
   .settings-bar .dot.on{background:var(--good); box-shadow:0 0 8px var(--good);}
   .settings-bar .dot.off{background:var(--ink-dim);}
-  .settings-bar .divider{width:1px;height:20px;background:var(--hairline);}
+  .settings-timezone{grid-column:1 / -1; padding:8px 6px 2px; border-top:1px solid var(--hairline); text-align:center; color:var(--ink-dim); font-size:11px; font-weight:500; line-height:1.5; overflow-wrap:anywhere;}
+  @media(max-width:480px){.settings-bar{grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:10px;} .settings-bar .change-location{grid-column:1 / -1;} .settings-bar .setting-item{padding:8px 6px;}}
   .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:20px;}
   
   .card{background:var(--bg-card); border:1px solid var(--hairline); border-radius:16px; padding:22px; position:relative; overflow:hidden; transition:all 0.35s var(--ease-out-expo); opacity:0; transform:translateY(24px) scale(0.98); will-change:transform, opacity;}
@@ -172,7 +174,7 @@
   .t-agni { color: var(--fire); }
   .t-akash { color: var(--ether); }
 
-  @media(max-width:640px){.wheel-container{width:220px; height:220px;} .wheel-ring{width:260px; height:260px;} .grid{grid-template-columns:1fr; gap:12px;} .card{padding:18px;} .row{margin:0 -18px; padding-left:18px; padding-right:18px;} .settings-bar{max-width:none; border-radius:12px; padding:8px 14px;} .toast-container{right:12px; left:12px; max-width:none;}}
+  @media(max-width:640px){.wheel-container{width:220px; height:220px;} .wheel-ring{width:260px; height:260px;} .grid{grid-template-columns:1fr; gap:12px;} .card{padding:18px;} .row{margin:0 -18px; padding-left:18px; padding-right:18px;} .settings-bar{border-radius:14px;} .toast-container{right:12px; left:12px; max-width:none;}}
   .skeleton{background:linear-gradient(90deg, var(--hairline) 25%, var(--hairline-light) 50%, var(--hairline) 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:6px; height:16px; width:60%; display:inline-block;}
   .manifest-block{padding:16px; background:var(--bg-elevated); border-radius:12px; border:1.5px solid var(--hairline); transition:all 0.3s var(--ease-out-expo);}
   .manifest-block:hover{border-color:var(--hairline-light); transform:translateY(-2px);}
@@ -194,10 +196,7 @@
     <p>Sunrise calculations run on your device. Live location follows you while this page is visible. You can pause tracking or use manual coordinates. Automatic timezone lookup requires internet; offline, the last timezone is retained and marked for confirmation.</p>
     <button class="btn" onclick="detectLocation()">Start live location</button>
     <div id="locErr"></div>
-    <label for="locationTimezone">Location timezone</label>
-    <input id="locationTimezone" list="timezoneOptions" placeholder="e.g. Asia/Kolkata" style="max-width:280px;width:100%;margin:12px auto;display:block;">
-    <datalist id="timezoneOptions"><option value="Asia/Kolkata"><option value="Europe/London"><option value="America/New_York"><option value="Australia/Sydney"><option value="Europe/Oslo"><option value="Pacific/Apia"><option value="UTC"></datalist>
-    <div class="hint">Required for manual coordinates. Leave blank for automatic timezone updates with live GPS. Enter a timezone to keep it fixed. Live GPS works while this page is visible; updates apply after about 1 km of movement. Automatic timezone lookup sends rounded coordinates to Open-Meteo. IP fallback contacts ipapi.co if GPS fails.</div>
+    <div class="hint">Live GPS updates while this page is visible. Automatic timezone lookup sends rounded coordinates to Open-Meteo; IP fallback contacts ipapi.co if GPS fails.</div>
     <label class="notify-opt" for="notifyGate" onclick="event.preventDefault(); toggleNotifyGate()">
       <div class="bell-icon" id="bellGate">🔔</div>
       <div class="notify-text">
@@ -214,6 +213,10 @@
         <input id="manLat" type="number" step="0.0001" placeholder="Latitude" min="-90" max="90" inputmode="decimal">
         <input id="manLon" type="number" step="0.0001" placeholder="Longitude" min="-180" max="180" inputmode="decimal">
         <br>
+    <label for="locationTimezone">Location timezone</label>
+    <input id="locationTimezone" list="timezoneOptions" placeholder="e.g. Asia/Kolkata" style="max-width:280px;width:100%;margin:12px auto;display:block;">
+    <datalist id="timezoneOptions"><option value="Asia/Kolkata"><option value="Europe/London"><option value="America/New_York"><option value="Australia/Sydney"><option value="Europe/Oslo"><option value="Pacific/Apia"><option value="UTC"></datalist>
+        <div class="hint">Choose the timezone for these coordinates, for example Asia/Kolkata. This field is required for manual locations.</div>
         <button class="btn ghost" onclick="useManualLocation()">Use this location</button>
         <div class="hint">Don't know your coordinates? Search your city on <a href="https://www.google.com/maps" target="_blank">Google Maps</a>, right-click your spot, and the lat/long appears at the top.</div>
       </div>
@@ -263,18 +266,14 @@
         <div class="countdown-hero" id="heroCountdown">Next change in —</div>
       </div>
     </div>
-    <div class="settings-bar" id="settingsBar">
-      <div class="setting-item" id="notifySetting" onclick="toggleNotifyStatus()">
-        <span class="dot off" id="notifyDot"></span>
+    <div class="settings-bar" id="settingsBar" role="group" aria-label="Location and alert settings">
+      <button class="setting-item" id="notifySetting" type="button" onclick="toggleNotifyStatus()">
+        <span class="dot off" id="notifyDot" aria-hidden="true"></span>
         <span>Auspicious alerts</span>
-      </div>
-      <div class="divider"></div>
-      <span id="timezoneLabel" class="setting-item"></span>
-      <button class="setting-item" id="liveLocationToggle" type="button" onclick="toggleLiveLocation()" style="background:transparent;border:0;color:inherit;font:inherit;">Start live GPS</button>
-      <div class="setting-item" onclick="resetLocation()">
-        <span>🔄</span>
-        <span>Change location</span>
-      </div>
+      </button>
+      <button class="setting-item" id="liveLocationToggle" type="button" onclick="toggleLiveLocation()">Start live GPS</button>
+      <button class="setting-item change-location" type="button" onclick="resetLocation()">Change location</button>
+      <div class="settings-timezone">Timezone: <span id="timezoneLabel"></span></div>
     </div>
     <div class="grid">
       <div class="card" data-delay="0">
@@ -1097,7 +1096,7 @@ function startApp(){
   appStarted=true;
   document.getElementById('gate').style.display='none';
   document.getElementById('dash').style.display='block';
-  document.getElementById('settingsBar').style.display='flex';
+  document.getElementById('settingsBar').style.display='grid';
   initAmbientCanvas();
 
   document.getElementById('plannerDate').value = locationDateKey(new Date());
