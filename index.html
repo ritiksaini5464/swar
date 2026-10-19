@@ -51,9 +51,17 @@
   .collapsible-header:hover{color:var(--ink);}
   .collapsible-header .chevron{transition:transform 0.3s var(--ease-out-expo); font-size:10px; display:inline-block;}
   .collapsible-header.open .chevron{transform:rotate(90deg);}
-  .collapsible-body{max-height:0; overflow:hidden; transition:max-height 0.4s var(--ease-out-expo), opacity 0.3s ease; opacity:0; text-align:left;}
-  .collapsible-body.open{max-height:300px; opacity:1;}
+  .collapsible-body{display:none; text-align:left;}
+  .collapsible-body.open{display:block; max-height:none; overflow:visible; opacity:1;}
   .collapsible-body .inner{padding-top:12px;}
+  .manual-coordinates{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:16px; text-align:left;}
+  .manual-coordinates label{display:block; font-size:13px; color:var(--ink-muted); margin-bottom:6px;}
+  .collapsible-body .manual-coordinates input{width:100%; min-width:0; box-sizing:border-box; margin:0;}
+  .collapsible-body select{width:100%; box-sizing:border-box; margin-top:8px; padding:10px; min-height:44px; border:1px solid var(--hairline); border-radius:10px; background:var(--bg-elevated); color:var(--ink);}
+  .collapsible-body .inner input,.collapsible-body .inner select{font-size:16px;}
+  .manual-actions{display:flex; flex-direction:column; gap:12px; margin-top:16px;}
+  .manual-error{color:var(--avoid); font-size:13px; line-height:1.5; margin-top:14px;}
+  .manual-error:empty{display:none;}
   .collapsible-body input{background:var(--bg-elevated); border:1.5px solid var(--hairline); color:var(--ink); border-radius:10px; padding:11px 14px; font-size:13px; margin:6px 4px 0 0; width:130px; transition:border-color 0.2s, box-shadow 0.2s; outline:none; min-height:44px;}
   .collapsible-body input:focus{border-color:var(--ida); box-shadow:0 0 0 3px rgba(125,211,252,0.1);}
   .collapsible-body .hint{margin-top:10px; color:var(--ink-muted); font-size:11.5px; line-height:1.5;}
@@ -210,15 +218,22 @@
     </div>
     <div class="collapsible-body" id="manualBody">
       <div class="inner" style="text-align:center;">
-        <input id="manLat" type="number" step="0.0001" placeholder="Latitude" min="-90" max="90" inputmode="decimal">
-        <input id="manLon" type="number" step="0.0001" placeholder="Longitude" min="-180" max="180" inputmode="decimal">
-        <br>
+        <div class="manual-coordinates">
+          <div><label for="manLat">Latitude</label><input id="manLat" type="text" inputmode="text" autocomplete="off" placeholder="e.g. 32.9631" aria-describedby="coordinateHelp"></div>
+          <div><label for="manLon">Longitude</label><input id="manLon" type="text" inputmode="text" autocomplete="off" placeholder="e.g. -96.9972" aria-describedby="coordinateHelp"></div>
+        </div>
+        <label for="manLonHemisphere">Longitude direction</label>
+        <select id="manLonHemisphere"><option value="">Use the sign entered above (+ east, - west)</option><option value="W">West (W) - use for the mainland United States</option><option value="E">East (E)</option></select>
+        <div class="hint" id="coordinateHelp">Use decimal degrees, keeping the decimal point. For a west longitude, enter a minus sign or select West above. Example only: -96.9972 or 96.9972 W. Do not copy this example unless it matches your location.</div>
     <label for="locationTimezone">Location timezone</label>
     <input id="locationTimezone" list="timezoneOptions" placeholder="e.g. Central Time or America/Chicago" style="max-width:280px;width:100%;margin:12px auto;display:block;">
     <datalist id="timezoneOptions"><option value="America/New_York" label="Eastern Time (US)"><option value="America/Chicago" label="Central Time (US)"><option value="America/Denver" label="Mountain Time (US)"><option value="America/Los_Angeles" label="Pacific Time (US)"><option value="America/Phoenix" label="Arizona (no daylight saving)"><option value="America/Anchorage" label="Alaska"><option value="Pacific/Honolulu" label="Hawaii"><option value="Asia/Kolkata"><option value="Europe/London"><option value="America/New_York"><option value="Australia/Sydney"><option value="Europe/Oslo"><option value="Pacific/Apia"><option value="UTC"></datalist>
         <div class="hint">Choose a suggested timezone or enter a name such as Central Time or America/Chicago. US abbreviations (CST/CDT, EST/EDT, MST/MDT, PST/PDT) use the corresponding US regional daylight-saving rules. For most of Arizona choose America/Phoenix. Use device timezone only if these coordinates are in your device's timezone.</div>
-        <button class="btn ghost" type="button" onclick="useDeviceTimezone()">Use device timezone</button>
-        <button class="btn ghost" onclick="useManualLocation()">Use this location</button>
+        <div class="manual-error" id="manualError" role="alert" aria-live="polite"></div>
+        <div class="manual-actions">
+          <button class="btn ghost" type="button" onclick="useDeviceTimezone()">Use device timezone</button>
+          <button class="btn" type="button" id="useManualLocationButton" onclick="useManualLocation()">Use this location</button>
+        </div>
         <div class="hint">Don't know your coordinates? Search your city on <a href="https://www.google.com/maps" target="_blank">Google Maps</a>, right-click your spot, and the lat/long appears at the top.</div>
       </div>
     </div>
@@ -971,8 +986,17 @@ async function handleLiveLocationError(error,epoch){
   if(epoch!==locationEpoch) return;
   if(error.code===1){
     stopLiveLocation();
-    document.getElementById('locErr').textContent='Location permission denied. Enable it in your browser or enter coordinates manually.';
-    setLocationStatus('GPS permission denied; using last location if available');
+    const fallbackEpoch=locationEpoch;
+    setLocationStatus('The browser could not provide GPS permission. Trying approximate IP location...');
+    if(!appStarted){
+      const ok=await tryIpFallback(fallbackEpoch);
+      if(fallbackEpoch!==locationEpoch) return;
+      if(ok) return;
+      openManualLocation();
+    }
+    const message='GPS permission error from the browser. On iPhone, check Settings > Privacy & Security > Location Services as well as the Safari website setting. You can use manual coordinates below.';
+    setLocationStatus(message);
+    if(!appStarted) document.getElementById('manualError').textContent=message;
     return;
   }
   setLocationStatus('GPS unavailable; waiting for a better signal.');
@@ -997,19 +1021,46 @@ async function tryIpFallback(epoch=locationEpoch){
       TIME_ZONE = data.timezone;
       LAT = data.latitude; LON = data.longitude; saveLocation(LAT, LON);
       document.getElementById('locErr').textContent = ''; startApp();
-      setLocationStatus('IP estimate; GPS not yet available.'); return true;
+      setLocationStatus('Approximate IP location; this is not live GPS and may differ from your actual location. Use Change location if incorrect.'); return true;
     }
   }catch(e){}
   return false;
 }
 
+function openManualLocation(){
+  document.getElementById('manualBody').classList.add('open');
+  document.getElementById('manualToggle').classList.add('open');
+}
+function manualLocationError(message){
+  document.getElementById('locErr').textContent=message;
+  const error=document.getElementById('manualError');
+  error.textContent=message;
+  openManualLocation();
+  if(typeof error.scrollIntoView==='function') error.scrollIntoView({block:'nearest'});
+}
+function parseManualCoordinate(text,axis,hemisphere=''){
+  const match=String(text).trim().replace(/−/g,'-').toUpperCase().match(/^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*([NSEW])?$/);
+  if(!match) return NaN;
+  let value=Number(match[1].replace(',','.'));
+  const suffix=match[2]||hemisphere;
+  if(match[2] && hemisphere && match[2]!==hemisphere) return NaN;
+  if(suffix){
+    if(axis==='latitude' && !['N','S'].includes(suffix)) return NaN;
+    if(axis==='longitude' && !['E','W'].includes(suffix)) return NaN;
+    if(value<0 && ['N','E'].includes(suffix)) return NaN;
+    value=Math.abs(value)*(['S','W'].includes(suffix)?-1:1);
+  }
+  return value;
+}
 function useManualLocation(){
-  const lat = parseFloat(document.getElementById('manLat').value);
-  const lon = parseFloat(document.getElementById('manLon').value);
-  if(isNaN(lat)||isNaN(lon)){ document.getElementById('locErr').textContent='Please enter valid numbers.'; return; }
-  if(lat<-90||lat>90||lon<-180||lon>180){ document.getElementById('locErr').textContent='Invalid range.'; return; }
+  const lat = parseManualCoordinate(document.getElementById('manLat').value,'latitude');
+  const lon = parseManualCoordinate(document.getElementById('manLon').value,'longitude',document.getElementById('manLonHemisphere').value||'');
+  document.getElementById('manualError').textContent='';
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)){ manualLocationError('Enter decimal coordinates, for example 32.9631 and -96.9972, or a longitude ending in W. Check the signs and direction.'); return; }
+  if(lat<-90||lat>90){ manualLocationError('Latitude must be between -90 and 90 degrees. Keep the decimal point.'); return; }
+  if(lon<-180||lon>180){ manualLocationError('Longitude must be between -180 and 180 degrees. The value entered is '+lon+'. Check the decimal point; west longitudes need a minus sign or West selected.'); return; }
   const tz=selectedTimeZone();
-  if(!tz){ document.getElementById('locErr').textContent='Choose a timezone from the suggestions, for example Central Time (US) / America/Chicago or Eastern Time (US) / America/New_York. A UTC offset alone does not identify daylight-saving rules.'; return; }
+  if(!tz){ manualLocationError('Choose a timezone, for example America/Chicago for US Central Time or America/New_York for US Eastern Time.'); return; }
   stopLiveLocation();
   TIME_ZONE=tz; LAT=lat; LON=lon; saveLocation(LAT, LON);
   if(appStarted) refreshLocationReadings(); else startApp();
