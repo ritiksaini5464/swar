@@ -214,9 +214,10 @@
         <input id="manLon" type="number" step="0.0001" placeholder="Longitude" min="-180" max="180" inputmode="decimal">
         <br>
     <label for="locationTimezone">Location timezone</label>
-    <input id="locationTimezone" list="timezoneOptions" placeholder="e.g. Asia/Kolkata" style="max-width:280px;width:100%;margin:12px auto;display:block;">
-    <datalist id="timezoneOptions"><option value="Asia/Kolkata"><option value="Europe/London"><option value="America/New_York"><option value="Australia/Sydney"><option value="Europe/Oslo"><option value="Pacific/Apia"><option value="UTC"></datalist>
-        <div class="hint">Choose the timezone for these coordinates, for example Asia/Kolkata. This field is required for manual locations.</div>
+    <input id="locationTimezone" list="timezoneOptions" placeholder="e.g. Central Time or America/Chicago" style="max-width:280px;width:100%;margin:12px auto;display:block;">
+    <datalist id="timezoneOptions"><option value="America/New_York" label="Eastern Time (US)"><option value="America/Chicago" label="Central Time (US)"><option value="America/Denver" label="Mountain Time (US)"><option value="America/Los_Angeles" label="Pacific Time (US)"><option value="America/Phoenix" label="Arizona (no daylight saving)"><option value="America/Anchorage" label="Alaska"><option value="Pacific/Honolulu" label="Hawaii"><option value="Asia/Kolkata"><option value="Europe/London"><option value="America/New_York"><option value="Australia/Sydney"><option value="Europe/Oslo"><option value="Pacific/Apia"><option value="UTC"></datalist>
+        <div class="hint">Choose a suggested timezone or enter a name such as Central Time or America/Chicago. US abbreviations (CST/CDT, EST/EDT, MST/MDT, PST/PDT) use the corresponding US regional daylight-saving rules. For most of Arizona choose America/Phoenix. Use device timezone only if these coordinates are in your device's timezone.</div>
+        <button class="btn ghost" type="button" onclick="useDeviceTimezone()">Use device timezone</button>
         <button class="btn ghost" onclick="useManualLocation()">Use this location</button>
         <div class="hint">Don't know your coordinates? Search your city on <a href="https://www.google.com/maps" target="_blank">Google Maps</a>, right-click your spot, and the lat/long appears at the top.</div>
       </div>
@@ -818,14 +819,20 @@ let locationRequest=0, locationAbort=null, lastGpsFix=null, lastGpsApplied=0;
 let ipFallbackAttempted=false, liveTimezoneOverride=null;
 let pendingPositionTimer=null, lastPositionTimestamp=0, timezonePending=false;
 
+let livePreferenceInMemory=null;
 function loadLivePreference(){
-  try{ return localStorage.getItem(LIVE_LOCATION_KEY)==='true'; }catch(e){ return false; }
+  if(livePreferenceInMemory===null){
+    try{ livePreferenceInMemory=localStorage.getItem(LIVE_LOCATION_KEY)==='true'; }catch(e){ livePreferenceInMemory=false; }
+  }
+  return livePreferenceInMemory;
 }
 function setLivePreference(enabled){
+  livePreferenceInMemory=Boolean(enabled);
   try{ localStorage.setItem(LIVE_LOCATION_KEY,String(enabled)); }catch(e){}
 }
 function setLocationStatus(message){
   document.getElementById('locationStatus').textContent=message;
+  if(!appStarted) document.getElementById('locErr').textContent=message;
   document.getElementById('liveLocationToggle').textContent=loadLivePreference()?'Pause live GPS':'Start live GPS';
   document.getElementById('liveLocationToggle').setAttribute('aria-pressed',String(loadLivePreference()));
 }
@@ -856,17 +863,10 @@ function startLiveLocation(fromGate=false){
     document.getElementById('locErr').textContent='GPS is unavailable. Use manual coordinates.';
     setLocationStatus('GPS unavailable'); return;
   }
-  if(fromGate){
-    const entered=document.getElementById('locationTimezone').value.trim();
-    if(entered && !validTimeZone(entered)){
-      document.getElementById('locErr').textContent='Enter a valid timezone or leave it blank for automatic detection.'; return;
-    }
-    liveTimezoneOverride=entered||null;
-    try{ localStorage.setItem(LIVE_TZ_OVERRIDE_KEY,liveTimezoneOverride||''); }catch(e){}
-  }else{
-    try{ liveTimezoneOverride=localStorage.getItem(LIVE_TZ_OVERRIDE_KEY)||null; }catch(e){ liveTimezoneOverride=null; }
-    if(!validTimeZone(liveTimezoneOverride)) liveTimezoneOverride=null;
-  }
+  // Manual timezone input must never prevent automatic location startup.
+  // Live GPS always resolves its timezone independently from the manual form.
+  liveTimezoneOverride=null;
+  try{ localStorage.removeItem(LIVE_TZ_OVERRIDE_KEY); }catch(e){}
   const epoch=++locationEpoch;
   lastGpsFix=null; lastGpsApplied=0; lastPositionTimestamp=0; ipFallbackAttempted=false;
   setLivePreference(true);
@@ -916,8 +916,13 @@ async function applyLivePosition(position,epoch){
   const now=Date.now();
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180) return;
   if(position.timestamp && now-position.timestamp>120000) return;
-  if(!Number.isFinite(accuracy)||accuracy>1500){
-    setLocationStatus('GPS signal is too approximate; keeping the last location.'); return;
+  if(!Number.isFinite(accuracy)||accuracy<0){
+    setLocationStatus('The browser returned an invalid location accuracy. Try again or enter coordinates manually.'); return;
+  }
+  // A coarse first location is useful for sunrise. Do not strand users whose
+  // browser supplies network positioning instead of a precise GPS fix.
+  if(accuracy>1500 && lastGpsFix){
+    setLocationStatus('Keeping the last location while waiting for a more accurate GPS fix.'); return;
   }
   if(position.timestamp && position.timestamp<lastPositionTimestamp) return;
   lastPositionTimestamp=position.timestamp || now;
@@ -926,7 +931,6 @@ async function applyLivePosition(position,epoch){
   if(!moved && !retryTimezone){
     if(pendingPositionTimer!==null) clearTimeout(pendingPositionTimer);
     pendingPositionTimer=null;
-    if(locationAbort){locationRequest++;locationAbort.abort();locationAbort=null;}
     return;
   }
   if(lastGpsFix && now-lastGpsApplied<LOCATION_INTERVAL_MS){
@@ -938,6 +942,15 @@ async function applyLivePosition(position,epoch){
   pendingPositionTimer=null;
   const request=++locationRequest;
   if(locationAbort) locationAbort.abort();
+  if(!appStarted){
+    LAT=lat; LON=lon;
+    TIME_ZONE=TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    lastGpsFix={lat,lon}; lastGpsApplied=now; timezonePending=true;
+    saveLocation(lat,lon);
+    document.getElementById('locErr').textContent='';
+    startApp();
+    setLocationStatus('Location found (accuracy about '+Math.round(accuracy)+' m). Using '+TIME_ZONE+' while checking the location timezone...');
+  }
   let tz=liveTimezoneOverride, timezoneConfirmed=Boolean(tz);
   if(!tz){
     try{ tz=await timezoneAtCoordinates(lat,lon); timezoneConfirmed=true; }
@@ -980,8 +993,8 @@ async function tryIpFallback(epoch=locationEpoch){
     if(!res.ok) return false;
     const data = await res.json();
     if(epoch!==locationEpoch || appStarted) return false;
-    if(data && typeof data.latitude === 'number' && typeof data.longitude === 'number' && validTimeZone(selectedTimeZone() || data.timezone)){
-      TIME_ZONE = selectedTimeZone() || data.timezone;
+    if(data && typeof data.latitude === 'number' && typeof data.longitude === 'number' && validTimeZone(data.timezone)){
+      TIME_ZONE = data.timezone;
       LAT = data.latitude; LON = data.longitude; saveLocation(LAT, LON);
       document.getElementById('locErr').textContent = ''; startApp();
       setLocationStatus('IP estimate; GPS not yet available.'); return true;
@@ -996,7 +1009,7 @@ function useManualLocation(){
   if(isNaN(lat)||isNaN(lon)){ document.getElementById('locErr').textContent='Please enter valid numbers.'; return; }
   if(lat<-90||lat>90||lon<-180||lon>180){ document.getElementById('locErr').textContent='Invalid range.'; return; }
   const tz=selectedTimeZone();
-  if(!tz){ document.getElementById('locErr').textContent='Choose the timezone for these coordinates (for example Asia/Kolkata or Europe/London).'; return; }
+  if(!tz){ document.getElementById('locErr').textContent='Choose a timezone from the suggestions, for example Central Time (US) / America/Chicago or Eastern Time (US) / America/New_York. A UTC offset alone does not identify daylight-saving rules.'; return; }
   stopLiveLocation();
   TIME_ZONE=tz; LAT=lat; LON=lon; saveLocation(LAT, LON);
   if(appStarted) refreshLocationReadings(); else startApp();
@@ -1127,9 +1140,29 @@ function validTimeZone(tz){
   if(typeof tz!=='string' || !tz.trim()) return false;
   try{ new Intl.DateTimeFormat('en',{timeZone:tz}); return true; }catch(e){ return false; }
 }
+function normalizeTimeZone(value){
+  if(typeof value!=='string') return null;
+  const entered=value.trim();
+  if(!entered) return null;
+  const aliases={
+    'eastern':'America/New_York','eastern time':'America/New_York','eastern standard time':'America/New_York','eastern daylight time':'America/New_York','eastern time (us)':'America/New_York','us eastern':'America/New_York','est':'America/New_York','edt':'America/New_York',
+    'central':'America/Chicago','central time':'America/Chicago','central standard time':'America/Chicago','central daylight time':'America/Chicago','central time (us)':'America/Chicago','us central':'America/Chicago','cst':'America/Chicago','cdt':'America/Chicago',
+    'mountain':'America/Denver','mountain time':'America/Denver','mountain standard time':'America/Denver','mountain daylight time':'America/Denver','mountain time (us)':'America/Denver','us mountain':'America/Denver','mst':'America/Denver','mdt':'America/Denver',
+    'pacific':'America/Los_Angeles','pacific time':'America/Los_Angeles','pacific standard time':'America/Los_Angeles','pacific daylight time':'America/Los_Angeles','pacific time (us)':'America/Los_Angeles','us pacific':'America/Los_Angeles','pst':'America/Los_Angeles','pdt':'America/Los_Angeles',
+    'alaska':'America/Anchorage','alaska time':'America/Anchorage','akst':'America/Anchorage','akdt':'America/Anchorage',
+    'hawaii':'Pacific/Honolulu','hawaii time':'Pacific/Honolulu','hst':'Pacific/Honolulu',
+    'arizona':'America/Phoenix','arizona time':'America/Phoenix',
+    'india':'Asia/Kolkata','india standard time':'Asia/Kolkata'
+  };
+  const tz=aliases[entered.toLowerCase()] || entered;
+  if(!validTimeZone(tz)) return null;
+  return new Intl.DateTimeFormat('en',{timeZone:tz}).resolvedOptions().timeZone;
+}
 function selectedTimeZone(){
-  const value=document.getElementById('locationTimezone').value.trim();
-  return validTimeZone(value)?value:null;
+  return normalizeTimeZone(document.getElementById('locationTimezone').value);
+}
+function useDeviceTimezone(){
+  document.getElementById('locationTimezone').value=Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 function locationDateKey(date){
   const parts=new Intl.DateTimeFormat('en-GB',{timeZone:TIME_ZONE || 'UTC',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
